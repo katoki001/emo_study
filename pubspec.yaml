@@ -1,0 +1,25 @@
+name: ai_learning_companion
+description: AI-powered learning app with Flutter UI and Python AI backend
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  fl_chart: ^0.65.0  # For charts
+  http: ^0.13.6      # For API calls to Python backend
+  audioplayers: ^5.2.1  # For ambient sounds
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/
