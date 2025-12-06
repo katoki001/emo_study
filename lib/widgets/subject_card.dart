@@ -6,7 +6,7 @@ class SubjectCard extends StatelessWidget {
   final Color color;
   final String description;
   final VoidCallback onTap;
-  final double progress; // 0.0 to 1.0
+  final double progress;
 
   const SubjectCard({
     super.key,
@@ -20,21 +20,25 @@ class SubjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isSmallScreen = screenWidth < 240;
+
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        margin: const EdgeInsets.all(8),
-        padding: const EdgeInsets.all(16),
+        width: double.infinity,
+        margin: const EdgeInsets.all(4),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: color.withOpacity(0.2),
-              blurRadius: 10,
-              spreadRadius: 2,
-              offset: const Offset(0, 4),
+              color: color.withOpacity(0.15),
+              blurRadius: 6,
+              spreadRadius: 1,
+              offset: const Offset(0, 2),
             ),
           ],
           gradient: LinearGradient(
@@ -42,57 +46,48 @@ class SubjectCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               color.withOpacity(0.05),
-              color.withOpacity(0.15),
+              color.withOpacity(0.1),
             ],
           ),
           border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 1,
+            color: color.withOpacity(0.2),
+            width: 0.5,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             // Header with icon and subject
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.2),
+                    color: color.withOpacity(0.15),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     icon,
                     color: color,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    subject,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
+                    size: isSmallScreen ? 16 : 18,
                   ),
                 ),
                 if (progress > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 6,
+                      vertical: 2,
                     ),
                     decoration: BoxDecoration(
                       color: _getProgressColor(progress),
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       '${(progress * 100).toInt()}%',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 10,
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                       ),
@@ -101,97 +96,87 @@ class SubjectCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
 
-            // Description
+            // Subject title
             Text(
-              description,
+              subject,
               style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-                height: 1.4,
+                fontSize: isSmallScreen ? 14 : 15,
+                fontWeight: FontWeight.bold,
+                color: color,
+                height: 1.2,
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 4),
 
-            // Progress bar (if progress > 0)
-            if (progress > 0)
-              Column(
-                children: [
-                  LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: color.withOpacity(0.1),
-                    color: _getProgressColor(progress),
-                    minHeight: 6,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Progress',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      Text(
-                        '${(progress * 100).toInt()}% complete',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: color,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-
-            const SizedBox(height: 12),
-
-            // AI Assessment Button
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.auto_awesome,
-                    color: color,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'AI Knowledge Assessment',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: color,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+            // Description
+            Expanded(
+              child: Text(
+                description,
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 10 : 11,
+                  color: Colors.grey[700],
+                  height: 1.3,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
 
-            // Quick actions
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildActionButton('Study Plan', Icons.schedule, color),
-                _buildActionButton('Quizzes', Icons.quiz, color),
-                _buildActionButton('Resources', Icons.menu_book, color),
-              ],
+            // Progress bar (if progress > 0)
+            if (progress > 0) ...[
+              const SizedBox(height: 8),
+              LinearProgressIndicator(
+                value: progress,
+                backgroundColor: color.withOpacity(0.1),
+                color: _getProgressColor(progress),
+                minHeight: 4,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                height: 14,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Progress',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                    Text(
+                      '${(progress * 100).toInt()}%',
+                      style: TextStyle(
+                        fontSize: 9,
+                        color: color,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Quick actions (only icons)
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 15,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildActionIcon(Icons.auto_awesome, color, 'AI Assessment'),
+                  _buildActionIcon(Icons.schedule, color, 'Study Plan'),
+                  _buildActionIcon(Icons.quiz, color, 'Quizzes'),
+                  if (!isSmallScreen)
+                    _buildActionIcon(Icons.menu_book, color, 'Resources'),
+                ],
+              ),
             ),
           ],
         ),
@@ -199,30 +184,21 @@ class SubjectCard extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButton(String label, IconData icon, Color color) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            color: color,
-            size: 18,
-          ),
+  Widget _buildActionIcon(IconData icon, Color color, String tooltip) {
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        padding: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          shape: BoxShape.circle,
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: color,
-          ),
+        child: Icon(
+          icon,
+          color: color,
+          size: 14,
         ),
-      ],
+      ),
     );
   }
 
@@ -234,81 +210,125 @@ class SubjectCard extends StatelessWidget {
   }
 }
 
-// Example usage in your Education Screen:
-class SubjectGrid extends StatelessWidget {
+// MOST IMPORTANT: How you use the Grid in your EducationScreen
+class EducationScreen extends StatelessWidget {
   final List<Map<String, dynamic>> subjects = [
     {
       'subject': 'Physics',
       'icon': Icons.rocket_launch,
       'color': Colors.blue,
-      'description': 'Mechanics, Thermodynamics, Electromagnetism',
+      'description': 'Mechanics, Thermodynamics',
       'progress': 0.65,
     },
     {
       'subject': 'Mathematics',
       'icon': Icons.calculate,
       'color': Colors.purple,
-      'description': 'Algebra, Calculus, Statistics',
+      'description': 'Algebra, Calculus, Stats',
       'progress': 0.80,
     },
     {
       'subject': 'Chemistry',
       'icon': Icons.science,
       'color': Colors.green,
-      'description': 'Organic, Inorganic, Physical Chemistry',
+      'description': 'Organic, Inorganic',
       'progress': 0.45,
     },
     {
       'subject': 'Biology',
       'icon': Icons.eco,
       'color': Colors.teal,
-      'description': 'Cell Biology, Genetics, Human Anatomy',
+      'description': 'Cell Biology, Genetics',
       'progress': 0.70,
     },
     {
       'subject': 'Computer Science',
       'icon': Icons.code,
       'color': Colors.orange,
-      'description': 'Programming, Algorithms, Data Structures',
+      'description': 'Programming, Algorithms',
       'progress': 0.90,
     },
     {
       'subject': 'History',
       'icon': Icons.history,
       'color': Colors.brown,
-      'description': 'World History, Ancient Civilizations',
+      'description': 'World History',
       'progress': 0.30,
     },
   ];
 
-  SubjectGrid({super.key});
+  EducationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.85,
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return SafeArea(
+      // ADD THIS - prevents overflow behind system UI
+      child: SingleChildScrollView(
+        // ADD THIS - makes entire screen scrollable
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: screenHeight - 400, // Ensure minimum height
+          ),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                  child: Text(
+                    'Subjects',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[800],
+                    ),
+                  ),
+                ),
+
+                // Grid View wrapped with Flexible
+                Flexible(
+                  child: GridView.builder(
+                    shrinkWrap:
+                        true, // IMPORTANT: makes GridView only take needed space
+                    physics:
+                        const NeverScrollableScrollPhysics(), // IMPORTANT: prevents nested scrolling
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount:
+                          MediaQuery.of(context).size.width > 600 ? 3 : 2,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                      childAspectRatio:
+                          0.85, // Adjust this for card proportions
+                    ),
+                    itemCount: subjects.length,
+                    itemBuilder: (context, index) {
+                      final subject = subjects[index];
+                      return SubjectCard(
+                        subject: subject['subject'],
+                        icon: subject['icon'],
+                        color: subject['color'],
+                        description: subject['description'],
+                        progress: subject['progress'],
+                        onTap: () {
+                          print('Selected: ${subject['subject']}');
+                        },
+                      );
+                    },
+                  ),
+                ),
+
+                // Bottom padding
+                SizedBox(height: MediaQuery.of(context).padding.bottom + 20),
+              ],
+            ),
+          ),
+        ),
       ),
-      itemCount: subjects.length,
-      itemBuilder: (context, index) {
-        final subject = subjects[index];
-        return SubjectCard(
-          subject: subject['subject'],
-          icon: subject['icon'],
-          color: subject['color'],
-          description: subject['description'],
-          progress: subject['progress'],
-          onTap: () {
-            // Handle subject tap
-            print('Selected: ${subject['subject']}');
-            // You can navigate to subject details screen
-            // or start AI assessment
-          },
-        );
-      },
     );
   }
 }

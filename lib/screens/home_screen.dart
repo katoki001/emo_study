@@ -32,7 +32,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_appBarTitles[_selectedIndex]),
+        title: Text(
+          _appBarTitles[_selectedIndex],
+          style: const TextStyle(
+            fontSize: 18.0,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         backgroundColor: Colors.deepPurple[50],
         elevation: 0,
         actions: [
@@ -41,12 +47,14 @@ class _HomeScreenState extends State<HomeScreen> {
             onPressed: () {
               // Open music player
             },
+            tooltip: 'Music Player',
           ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () {
               // Open settings
             },
+            tooltip: 'Settings',
           ),
         ],
       ),
@@ -63,57 +71,34 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: _screens[_selectedIndex],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey[600],
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.school),
+            label: 'Learn',
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
-              blurRadius: 10,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.assistant),
+            label: 'AI Helper',
           ),
-          child: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: Colors.deepPurple,
-            unselectedItemColor: Colors.grey[600],
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
-            items: const [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.school),
-                label: 'Learn',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.assistant),
-                label: 'AI Helper',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.analytics),
-                label: 'Progress',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.timer),
-                label: 'Timer',
-              ),
-            ],
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics),
+            label: 'Progress',
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.timer),
+            label: 'Timer',
+          ),
+        ],
       ),
     );
   }
