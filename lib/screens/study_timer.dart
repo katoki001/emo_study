@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 
 class StudyTimerScreen extends StatefulWidget {
@@ -10,66 +9,64 @@ class StudyTimerScreen extends StatefulWidget {
 }
 
 class _StudyTimerScreenState extends State<StudyTimerScreen> {
-  TimerState _timerState = TimerState.stopped;
-  Duration _studyDuration = const Duration(minutes: 25);
-  Duration _breakDuration = const Duration(minutes: 5);
-  Duration _remainingTime = const Duration(minutes: 25);
-  late Timer _timer;
+  // TIMER STATE
+  bool _isRunning = false;
+  bool _startLocked = false; // <--- REQUIRED FIX
+  Duration _timeLeft = const Duration(minutes: 25);
+  Timer? _timer;
+
+  // SETTINGS
+  Duration _studyTime = const Duration(minutes: 25);
+  Duration _breakTime = const Duration(minutes: 5);
+  bool _isStudyTime = true;
+  int _sessionsDone = 0;
 
   @override
   void initState() {
     super.initState();
-    _remainingTime = _studyDuration;
+    _timeLeft = _studyTime;
   }
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Timer Display
+          // TIMER CIRCLE
           Container(
-            padding: const EdgeInsets.all(40),
+            width: 240,
+            height: 250,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: _getTimerColor(),
-              boxShadow: [
-                BoxShadow(
-                  color: _getTimerColor().withOpacity(0.3),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
+              color: _isStudyTime ? Colors.deepPurple : Colors.green,
             ),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  _timerState == TimerState.study ? 'STUDY TIME' : 'BREAK TIME',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  _formatDuration(_remainingTime),
+                  _isStudyTime ? 'STUDY' : 'BREAK',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 48,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    fontFamily: 'Monospace',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _formatTime(_timeLeft),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 56,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _timerState == TimerState.study
-                      ? 'Focus on your task'
-                      : 'Time to relax!',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                  _isRunning ? 'Keep going!' : 'Ready to start',
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 16,
                   ),
                 ),
@@ -77,96 +74,111 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
             ),
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
 
-          // Timer Controls
+          // BUTTONS
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              FloatingActionButton(
-                onPressed: _startTimer,
-                backgroundColor: Colors.green,
-                child: const Icon(Icons.play_arrow, color: Colors.white),
-              ),
-              FloatingActionButton(
-                onPressed: _pauseTimer,
-                backgroundColor: Colors.orange,
-                child: const Icon(Icons.pause, color: Colors.white),
-              ),
-              FloatingActionButton(
+              if (!_isRunning)
+                _buildButton(
+                  icon: Icons.play_arrow,
+                  label: 'Start',
+                  color: Colors.green,
+                  onPressed: _startTimer,
+                ),
+              const SizedBox(width: 24),
+              if (_isRunning)
+                _buildButton(
+                  icon: Icons.pause,
+                  label: 'Pause',
+                  color: Colors.orange,
+                  onPressed: _pauseTimer,
+                ),
+              const SizedBox(width: 24),
+              _buildButton(
+                icon: Icons.stop,
+                label: 'Stop',
+                color: Colors.red,
                 onPressed: _stopTimer,
-                backgroundColor: Colors.red,
-                child: const Icon(Icons.stop, color: Colors.white),
               ),
             ],
           ),
 
-          const SizedBox(height: 40),
+          const SizedBox(height: 24),
 
-          // Timer Settings
+          // SESSION COUNTER
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.deepPurple.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
             ),
-            child: Column(
-              children: [
-                _buildTimeSetting(
-                    'Study Duration', _studyDuration, _updateStudyDuration),
-                const SizedBox(height: 16),
-                _buildTimeSetting(
-                    'Break Duration', _breakDuration, _updateBreakDuration),
-              ],
+            child: Text(
+              'Sessions: $_sessionsDone',
+              style: const TextStyle(
+                color: Colors.deepPurple,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-          // Ambient Sounds
+          // TIME SETTINGS
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.grey.withOpacity(0.1),
-                  blurRadius: 10,
-                  spreadRadius: 2,
-                ),
-              ],
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Ambient Sounds',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey[800],
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Study:', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed: () => _changeTime(true, -5),
+                    ),
+                    Text(
+                      '${_studyTime.inMinutes} min',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () => _changeTime(true, 5),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildSoundOption('Rain', Icons.cloudy_snowing),
-                      _buildSoundOption('Forest', Icons.park),
-                      _buildSoundOption('Coffee Shop', Icons.coffee),
-                      _buildSoundOption('White Noise', Icons.waves),
-                      _buildSoundOption('Piano', Icons.piano),
-                    ],
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Break:', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 10),
+                    IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed: () => _changeTime(false, -5),
+                    ),
+                    Text(
+                      '${_breakTime.inMinutes} min',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () => _changeTime(false, 5),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -176,161 +188,125 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
     );
   }
 
-  Widget _buildTimeSetting(
-      String label, Duration duration, Function(Duration) onUpdate) {
-    return Row(
+  // REUSABLE BUTTON WIDGET
+  Widget _buildButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onPressed,
+  }) {
+    return Column(
       children: [
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+        FloatingActionButton(
+          onPressed: onPressed,
+          backgroundColor: color,
+          child: Icon(icon, color: Colors.white),
         ),
-        Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.remove),
-              onPressed: () {
-                int minutes = duration.inMinutes - 5;
-                if (minutes >= 5) {
-                  onUpdate(Duration(minutes: minutes));
-                }
-              },
-            ),
-            Text(
-              '${duration.inMinutes} min',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: () {
-                int minutes = duration.inMinutes + 5;
-                if (minutes <= 60) {
-                  onUpdate(Duration(minutes: minutes));
-                }
-              },
-            ),
-          ],
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey,
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildSoundOption(String label, IconData icon) {
-    return Container(
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.deepPurple[50],
-        borderRadius: BorderRadius.circular(15),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.deepPurple),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.deepPurple,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getTimerColor() {
-    switch (_timerState) {
-      case TimerState.study:
-        return Colors.deepPurple;
-      case TimerState.breakTime:
-        return Colors.green;
-      case TimerState.stopped:
-        return Colors.grey;
-    }
-  }
-
-  String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
-    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$twoDigitMinutes:$twoDigitSeconds';
-  }
-
+  // START TIMER — FIXED VERSION
   void _startTimer() {
+    if (_startLocked) return;
+    _startLocked = true;
+
+    if (_isRunning) {
+      _startLocked = false;
+      return;
+    }
+
+    _timer?.cancel();
+
     setState(() {
-      _timerState = TimerState.study;
+      _isRunning = true;
     });
 
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) return;
+
       setState(() {
-        if (_remainingTime.inSeconds > 0) {
-          _remainingTime = _remainingTime - const Duration(seconds: 1);
+        if (_timeLeft.inSeconds > 0) {
+          _timeLeft -= const Duration(seconds: 1);
         } else {
-          _switchTimerMode();
+          timer.cancel();
+          _isRunning = false;
+          _sessionComplete();
         }
       });
+    });
+
+    Future.delayed(const Duration(milliseconds: 80), () {
+      _startLocked = false;
     });
   }
 
   void _pauseTimer() {
-    _timer.cancel();
+    _timer?.cancel();
+    setState(() {
+      _isRunning = false;
+    });
   }
 
   void _stopTimer() {
-    _timer.cancel();
+    _timer?.cancel();
     setState(() {
-      _timerState = TimerState.stopped;
-      _remainingTime = _studyDuration;
+      _isRunning = false;
+      _timeLeft = _studyTime;
+      _isStudyTime = true;
     });
   }
 
-  void _switchTimerMode() {
-    _timer.cancel();
+  void _sessionComplete() {
     setState(() {
-      if (_timerState == TimerState.study) {
-        _timerState = TimerState.breakTime;
-        _remainingTime = _breakDuration;
-        _showBreakNotification();
+      if (_isStudyTime) {
+        _sessionsDone++;
+        _isStudyTime = false;
+        _timeLeft = _breakTime;
       } else {
-        _timerState = TimerState.study;
-        _remainingTime = _studyDuration;
-        _showStudyNotification();
-      }
-    });
-
-    _startTimer();
-  }
-
-  void _updateStudyDuration(Duration duration) {
-    setState(() {
-      _studyDuration = duration;
-      if (_timerState == TimerState.stopped) {
-        _remainingTime = duration;
+        _isStudyTime = true;
+        _timeLeft = _studyTime;
       }
     });
   }
 
-  void _updateBreakDuration(Duration duration) {
+  void _changeTime(bool isStudy, int minutes) {
+    if (_isRunning) return;
+
     setState(() {
-      _breakDuration = duration;
+      if (isStudy) {
+        int newMin = _studyTime.inMinutes + minutes;
+        if (newMin >= 1 && newMin <= 60) {
+          _studyTime = Duration(minutes: newMin);
+          if (_isStudyTime) _timeLeft = _studyTime;
+        }
+      } else {
+        int newMin = _breakTime.inMinutes + minutes;
+        if (newMin >= 1 && newMin <= 30) {
+          _breakTime = Duration(minutes: newMin);
+          if (!_isStudyTime) _timeLeft = _breakTime;
+        }
+      }
     });
   }
 
-  void _showBreakNotification() {
-    // Show notification for break time
+  String _formatTime(Duration d) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}';
   }
 
-  void _showStudyNotification() {
-    // Show notification for study time
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 }
-
-enum TimerState { study, breakTime, stopped }

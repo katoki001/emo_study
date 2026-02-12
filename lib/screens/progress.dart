@@ -22,7 +22,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10), // Reduced from 12
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -31,7 +31,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
             title: 'Weekly Progress',
             trailing: _buildTrendBadge('+12%', Colors.green),
             child: SizedBox(
-              height: 160,
+              height: 160, // Reduced from 160
               child: ProgressChart(
                 weeklyData: weeklyProgress,
                 title: 'Learning Progress',
@@ -40,29 +40,29 @@ class _ProgressScreenState extends State<ProgressScreen> {
             ),
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 12), // Reduced from 16
 
           // Emotion Analysis Section
           _buildSectionContainer(
             title: 'Emotion Analysis',
             trailing: IconButton(
-              icon: const Icon(Icons.refresh, size: 20),
+              icon: const Icon(Icons.refresh, size: 18), // Smaller
               onPressed: _updateEmotionAnalysis,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
-                  height: 140,
+                  height: 160, // Reduced from 180
                   child: EmotionChart(data: emotionData),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10), // Reduced from 12
                 _buildAIRecommendation(),
               ],
             ),
           ),
 
-          const SizedBox(height: 30), // Bottom padding
+          const SizedBox(height: 20), // Reduced from 30
         ],
       ),
     );
@@ -74,15 +74,15 @@ class _ProgressScreenState extends State<ProgressScreen> {
     required Widget child,
   }) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12), // Reduced from 14
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12), // Smaller
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            blurRadius: 6,
-            spreadRadius: 1,
+            color: Colors.grey.withOpacity(0.04),
+            blurRadius: 4, // Smaller
+            spreadRadius: 0.5,
           ),
         ],
       ),
@@ -95,7 +95,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               Text(
                 title,
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 14, // Smaller
                   fontWeight: FontWeight.bold,
                   color: Colors.grey[800],
                 ),
@@ -103,7 +103,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
               trailing ?? const SizedBox.shrink(),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10), // Reduced from 12
           child,
         ],
       ),

@@ -14,6 +14,7 @@ dependencies:
   http: ^0.13.6      # For API calls to Python backend
   audioplayers: ^5.2.1  # For ambient sounds
 
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -23,3 +24,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/
+    

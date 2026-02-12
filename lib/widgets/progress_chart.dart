@@ -16,7 +16,6 @@ class ProgressChart extends StatelessWidget {
     this.secondaryColor = Colors.purple,
     this.showLabels = true,
     this.showAverage = true,
-    // Removed the duplicate 'data' parameter
   });
 
   @override
@@ -24,31 +23,31 @@ class ProgressChart extends StatelessWidget {
     final maxValue = weeklyData.reduce((a, b) => a > b ? a : b);
     final minValue = weeklyData.reduce((a, b) => a < b ? a : b);
     final average = weeklyData.reduce((a, b) => a + b) / weeklyData.length;
+    const chartHeight = 42.0; // Reduced to match container
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(8), // Reduced padding
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            spreadRadius: 2,
+            color: Colors.grey.withOpacity(0.08),
+            blurRadius: 4,
+            spreadRadius: 0.5,
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title and Stats
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 11,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
                 ),
@@ -56,25 +55,25 @@ class ProgressChart extends StatelessWidget {
               if (showAverage)
                 Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
+                    horizontal: 6,
+                    vertical: 2,
                   ),
                   decoration: BoxDecoration(
                     color: _getColorForValue(average).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     children: [
                       Icon(
                         Icons.trending_up,
-                        size: 16,
+                        size: 8,
                         color: _getColorForValue(average),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 4),
                       Text(
-                        'Avg: ${average.toStringAsFixed(1)}%',
+                        '${average.toStringAsFixed(0)}%',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: _getColorForValue(average),
                         ),
@@ -85,41 +84,41 @@ class ProgressChart extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 8), // Reduced spacing
 
-          // Chart Area
+          // Chart Area - Use the exact height needed
           SizedBox(
-            height: 180,
+            height: chartHeight, // Use the variable
             child: Stack(
               children: [
                 // Grid Lines
-                _buildGridLines(),
+                _buildGridLines(chartHeight),
 
                 // Data Line
                 _buildDataLine(),
 
                 // Data Points
-                _buildDataPoints(),
+                _buildDataPoints(chartHeight),
 
                 // Average Line
-                if (showAverage) _buildAverageLine(average),
+                if (showAverage) _buildAverageLine(average, chartHeight),
               ],
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 6), // Reduced
 
           // X-Axis Labels
           if (showLabels)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 2), // Reduced
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
                     .map((day) => Text(
                           day,
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 9, // Smaller
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
                           ),
@@ -128,37 +127,37 @@ class ProgressChart extends StatelessWidget {
               ),
             ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 6), // Reduced
 
-          // Legend
+          // Legend - Made even more compact
           _buildLegend(maxValue, minValue, average),
         ],
       ),
     );
   }
 
-  Widget _buildGridLines() {
+  Widget _buildGridLines(double chartHeight) {
     return Column(
       children: [
-        for (int i = 0; i <= 4; i++)
+        for (int i = 0; i <= 1; i++) // Only 2 grid lines (0%, 100%)
           Expanded(
             child: Container(
               decoration: BoxDecoration(
                 border: Border(
                   top: BorderSide(
-                    color: Colors.grey.withOpacity(0.2),
-                    width: 1,
+                    color: Colors.grey.withOpacity(0.1), // Very light
+                    width: 0.5,
                   ),
                 ),
               ),
               child: Align(
                 alignment: Alignment.centerLeft,
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 8),
+                  padding: const EdgeInsets.only(left: 2), // Minimal
                   child: Text(
-                    '${(100 - i * 25)}%',
+                    '${(100 - i * 100)}%',
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: 7, // Very small
                       color: Colors.grey[400],
                     ),
                   ),
@@ -177,7 +176,7 @@ class ProgressChart extends StatelessWidget {
     for (int i = 0; i < weeklyData.length; i++) {
       final x = i * stepX;
       final y = weeklyData[i] / 100.0;
-      points.add(Offset(x, 1 - y)); // Invert Y because origin is top-left
+      points.add(Offset(x, 1 - y));
     }
 
     return CustomPaint(
@@ -190,14 +189,13 @@ class ProgressChart extends StatelessWidget {
     );
   }
 
-  Widget _buildDataPoints() {
+  Widget _buildDataPoints(double chartHeight) {
     final double stepX = 1.0 / (weeklyData.length - 1);
 
     return Row(
       children: weeklyData.asMap().entries.map((entry) {
         final index = entry.key;
         final value = entry.value;
-        // ignore: unused_local_variable
         final x = index * stepX;
         final y = value / 100.0;
 
@@ -205,55 +203,22 @@ class ProgressChart extends StatelessWidget {
           child: Align(
             alignment: Alignment.bottomCenter,
             child: Container(
-              margin: EdgeInsets.only(bottom: (1 - y) * 180 - 10),
-              child: Column(
-                children: [
-                  // Tooltip on hover
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: Tooltip(
-                      message: '${value.toStringAsFixed(0)}%',
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: _getColorForValue(value).withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${value.toStringAsFixed(0)}%',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
+              margin: EdgeInsets.only(
+                  bottom: (1 - y) * chartHeight - 4), // -4 instead of -6
+              child: GestureDetector(
+                onTap: () {},
+                child: Container(
+                  width: 8, // Smaller
+                  height: 8, // Smaller
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _getColorForValue(value),
+                      width: 1.5, // Thinner
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: _getColorForValue(value),
-                        width: 3,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _getColorForValue(value).withOpacity(0.5),
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -262,24 +227,17 @@ class ProgressChart extends StatelessWidget {
     );
   }
 
-  Widget _buildAverageLine(double average) {
+  Widget _buildAverageLine(double average, double chartHeight) {
     final y = average / 100.0;
 
     return Positioned(
       left: 0,
       right: 0,
-      bottom: (1 - y) * 180,
+      bottom: (1 - y) * chartHeight,
       child: Container(
-        height: 1,
+        height: 0.5,
         decoration: BoxDecoration(
-          color: Colors.orange,
-          gradient: LinearGradient(
-            colors: [
-              Colors.orange.withOpacity(0),
-              Colors.orange,
-              Colors.orange.withOpacity(0),
-            ],
-          ),
+          color: Colors.orange.withOpacity(0.5), // Lighter
         ),
       ),
     );
@@ -290,62 +248,72 @@ class ProgressChart extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _buildLegendItem(
-          'Highest',
-          '${maxValue.toStringAsFixed(1)}%',
+          'High',
+          '${maxValue.toStringAsFixed(0)}%',
           Colors.green,
-          Icons.arrow_upward,
         ),
         _buildLegendItem(
-          'Average',
-          '${average.toStringAsFixed(1)}%',
+          'Avg',
+          '${average.toStringAsFixed(0)}%',
           Colors.orange,
-          Icons.show_chart,
         ),
         _buildLegendItem(
-          'Lowest',
-          '${minValue.toStringAsFixed(1)}%',
+          'Low',
+          '${minValue.toStringAsFixed(0)}%',
           Colors.red,
-          Icons.arrow_downward,
         ),
       ],
     );
   }
 
-  Widget _buildLegendItem(
-      String label, String value, Color color, IconData icon) {
+  Widget _buildLegendItem(String label, String value, Color color) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(4), // Smaller
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withOpacity(0.05), // Very light
             shape: BoxShape.circle,
           ),
           child: Icon(
-            icon,
-            size: 18,
+            _getIconForLabel(label),
+            size: 12, // Smaller
             color: color,
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[600],
           ),
         ),
         const SizedBox(height: 2),
         Text(
+          label,
+          style: TextStyle(
+            fontSize: 8, // Smaller
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 1),
+        Text(
           value,
           style: TextStyle(
-            fontSize: 14,
+            fontSize: 9, // Smaller
             fontWeight: FontWeight.bold,
             color: color,
           ),
         ),
       ],
     );
+  }
+
+  IconData _getIconForLabel(String label) {
+    switch (label) {
+      case 'High':
+        return Icons.arrow_upward;
+      case 'Avg':
+        return Icons.show_chart;
+      case 'Low':
+        return Icons.arrow_downward;
+      default:
+        return Icons.circle;
+    }
   }
 
   Color _getColorForValue(double value) {
@@ -378,7 +346,6 @@ class _LineChartPainter extends CustomPainter {
       path.lineTo(points[i].dx * size.width, points[i].dy * size.height);
     }
 
-    // Fill under the line
     final fillPath = Path.from(path)
       ..lineTo(points.last.dx * size.width, size.height)
       ..lineTo(points.first.dx * size.width, size.height)
@@ -389,18 +356,17 @@ class _LineChartPainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          primaryColor.withOpacity(0.1),
-          primaryColor.withOpacity(0.05),
+          primaryColor.withOpacity(0.05), // Very light fill
+          primaryColor.withOpacity(0.01),
         ],
       ).createShader(Rect.fromLTRB(0, 0, size.width, size.height));
 
     canvas.drawPath(fillPath, fillPaint);
 
-    // Draw the line
     final linePaint = Paint()
       ..color = primaryColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 3
+      ..strokeWidth = 1.5 // Thinner line
       ..strokeCap = StrokeCap.round;
 
     canvas.drawPath(path, linePaint);
@@ -408,31 +374,4 @@ class _LineChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-// Example usage in Progress Screen:
-class ProgressScreenExample extends StatelessWidget {
-  final List<double> sampleData = [65, 72, 68, 85, 78, 90, 82];
-
-  ProgressScreenExample({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Progress Chart Example'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ProgressChart(
-          weeklyData: sampleData,
-          title: 'Learning Progress This Week',
-          primaryColor: Colors.deepPurple,
-          secondaryColor: Colors.purple,
-          showLabels: true,
-          showAverage: true,
-        ),
-      ),
-    );
-  }
 }
