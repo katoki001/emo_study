@@ -9,7 +9,6 @@ class SubjectCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String description;
-<<<<<<< HEAD
   final double progress;
   final VoidCallback onTap;
 =======
