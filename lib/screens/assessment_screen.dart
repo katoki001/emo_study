@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'dart:math';
-
-import 'package:ai_learning_companion/services/assessment_api.dart';
 import 'package:flutter/material.dart';
+import '../services/ai_service.dart';
 
 class AssessmentScreen extends StatefulWidget {
   final String subject;
@@ -19,135 +17,167 @@ class AssessmentScreen extends StatefulWidget {
 }
 
 class _AssessmentScreenState extends State<AssessmentScreen> {
+  late List<dynamic> questions;
   int currentQuestionIndex = 0;
   List<Map<String, dynamic>> userAnswers = [];
   bool isAssessmentComplete = false;
   bool isLoading = false;
   String? aiFeedback;
 
-  get subject => null;
+  @override
+  void initState() {
+    super.initState();
+    // Initialize questions from the passed data
+    questions = List.from(widget.assessmentData['questions']);
+  }
+
+  Future<void> _submitAnswer(String selectedOption) async {
+    setState(() => isLoading = true);
+
+    final currentQuestion = questions[currentQuestionIndex];
+    final String correctAnswer = currentQuestion['correctAnswer'];
+    final bool isCorrect = selectedOption == correctAnswer;
+
+    // 1. Record Answer
+    userAnswers.add({
+      'question': currentQuestion['question'],
+      'selected': selectedOption,
+      'correct': correctAnswer,
+      'isCorrect': isCorrect,
+    });
+
+    try {
+      // 2. Get AI Feedback (Encouragement/Correction)
+      final feedbackPrompt =
+          "The student is studying ${widget.subject}. Question: '${currentQuestion['question']}'. User answered '$selectedOption'. Correct answer is '$correctAnswer'. Give a 10-word max encouraging correction.";
+      final feedback = await AIService.getAIResponse(feedbackPrompt);
+
+      // 3. Check if we should end or continue (Limit to 5 questions)
+      if (currentQuestionIndex >= 4) {
+        setState(() {
+          aiFeedback = feedback;
+          isAssessmentComplete = true;
+          isLoading = false;
+        });
+      } else {
+        // 4. Generate Adaptive Next Question
+        final nextPrompt =
+            '''Generate a multiple choice question about ${widget.subject}. 
+        The student got the last one ${isCorrect ? "right" : "wrong"}. 
+        Return ONLY valid JSON in this format: 
+        {"question": "string", "options": ["a", "b", "c", "d"], "correctAnswer": "string"}''';
+
+        final aiResponse = await AIService.getAIResponse(nextPrompt);
+
+        // 5. Clean and Parse the JSON
+        final cleanJson = AIService.cleanJson(aiResponse);
+        final Map<String, dynamic> nextQuestion = jsonDecode(cleanJson);
+
+        setState(() {
+          questions.add(nextQuestion);
+          aiFeedback = feedback;
+          currentQuestionIndex++;
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      print("Quiz logic error: $e");
+      // Fallback: If AI fails to generate a new question, end the quiz gracefully
+      setState(() {
+        isLoading = false;
+        isAssessmentComplete = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text('${widget.subject} Assessment'),
         backgroundColor: Colors.deepPurple,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.timer),
-            onPressed: () {},
-          ),
-          // Add health indicator
-          FutureBuilder<bool>(
-            future: AIService.checkHealth(),
-            builder: (context, snapshot) {
-              return Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: snapshot.data == true ? Colors.green : Colors.red,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
+        foregroundColor: Colors.white,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: isAssessmentComplete
-            ? _buildResultsScreen()
-            : _buildQuestionScreen(),
+        child: isAssessmentComplete ? _buildResults() : _buildQuestion(),
       ),
     );
   }
 
-  Widget _buildQuestionScreen() {
-    final questions = widget.assessmentData['questions'] ?? [];
-
-    if (questions.isEmpty || currentQuestionIndex >= questions.length) {
-      return const Center(
-        child: Text('No questions available'),
-      );
-    }
-
-    final currentQuestion = questions[currentQuestionIndex];
+  Widget _buildQuestion() {
+    final q = questions[currentQuestionIndex];
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Progress indicator
-        LinearProgressIndicator(
-          value: (currentQuestionIndex + 1) / questions.length,
-        ),
-        const SizedBox(height: 16),
-
-        // Question number
-        Text(
-          'Question ${currentQuestionIndex + 1} of ${questions.length}',
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
+        // Progress Indicator
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: LinearProgressIndicator(
+            value: (currentQuestionIndex + 1) / 5,
+            minHeight: 10,
+            backgroundColor: Colors.grey[300],
+            color: Colors.deepPurple,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
 
-        // Question text
-        Text(
-          currentQuestion['question'],
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // Show AI feedback if available
+        // AI Feedback Section
         if (aiFeedback != null) ...[
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.deepPurple.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.deepPurple.shade200),
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue[100]!),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'AI Feedback:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.deepPurple,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(aiFeedback!),
-              ],
+            child: Text(
+              "Tutor: $aiFeedback",
+              style: const TextStyle(
+                  color: Colors.blue, fontWeight: FontWeight.w600),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
         ],
 
-        // Loading indicator
+        // Question Text
+        Text(
+          "Question ${currentQuestionIndex + 1}:",
+          style:
+              const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          q['question'],
+          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 30),
+
+        // Options List
         if (isLoading)
           const Center(child: CircularProgressIndicator())
         else
-          // Options
           Expanded(
             child: ListView.builder(
-              itemCount: currentQuestion['options'].length,
-              itemBuilder: (context, index) {
-                final option = currentQuestion['options'][index];
-                return Card(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  child: ListTile(
-                    title: Text(option),
-                    onTap: () => _submitAnswer(option),
+              itemCount: (q['options'] as List).length,
+              itemBuilder: (context, i) {
+                final option = q['options'][i];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12.0),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(16),
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black87,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        side: BorderSide(color: Colors.deepPurple[100]!),
+                      ),
+                    ),
+                    onPressed: () => _submitAnswer(option),
+                    child: Text(option, style: const TextStyle(fontSize: 16)),
                   ),
                 );
               },
@@ -157,232 +187,38 @@ class _AssessmentScreenState extends State<AssessmentScreen> {
     );
   }
 
-  Widget _buildResultsScreen() {
+  Widget _buildResults() {
+    int score = userAnswers.where((a) => a['isCorrect'] == true).length;
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.celebration,
-            size: 64,
-            color: Colors.green,
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.emoji_events, size: 80, color: Colors.amber),
+              const SizedBox(height: 16),
+              const Text("Assessment Complete!",
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text("You scored $score out of ${userAnswers.length}",
+                  style: const TextStyle(fontSize: 18)),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.deepPurple,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(200, 50),
+                ),
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Return to Home"),
+              )
+            ],
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Assessment Complete!',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Subject: ${widget.subject}',
-            style: const TextStyle(fontSize: 18),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Questions Answered: ${userAnswers.length}',
-            style: const TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 32),
-
-          // Get AI summary of performance
-          FutureBuilder<String>(
-            future: _getAssessmentSummary(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const CircularProgressIndicator();
-              }
-              if (snapshot.hasData) {
-                return Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        const Text(
-                          'AI Assessment Summary:',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(snapshot.data!),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Return to Subjects'),
-          ),
-        ],
+        ),
       ),
     );
-  }
-
-  Future<void> _submitAnswer(String answer) async {
-    setState(() {
-      isLoading = true;
-      aiFeedback = null;
-    });
-
-    // Save answer locally
-    userAnswers.add({
-      'question_index': currentQuestionIndex,
-      'answer': answer,
-      'correct_answer': widget.assessmentData['questions'][currentQuestionIndex]
-          ['correctAnswer'],
-      'timestamp': DateTime.now().toIso8601String(),
-    });
-
-    try {
-      // 1. Get AI feedback on the answer
-      final feedbackPrompt = '''
-Subject: ${widget.subject}
-Question: ${widget.assessmentData['questions'][currentQuestionIndex]['question']}
-Student's Answer: $answer
-Correct Answer: ${widget.assessmentData['questions'][currentQuestionIndex]['correctAnswer']}
-
-Provide brief, encouraging feedback on this answer. Keep it under 2 sentences.
-''';
-
-      final feedback = await AIService.getAIResponse(feedbackPrompt);
-
-      // 2. Generate next question or adapt difficulty
-      final isCorrect = answer ==
-          widget.assessmentData['questions'][currentQuestionIndex]
-              ['correctAnswer'];
-
-      // Check if assessment is complete
-      if (currentQuestionIndex + 1 >=
-          widget.assessmentData['questions'].length) {
-        setState(() {
-          isAssessmentComplete = true;
-          isLoading = false;
-        });
-
-        // Save all results
-        _saveAssessmentResults();
-      } else {
-        // Get adaptive next question from AI based on performance
-        final nextQuestionPrompt = '''
-Generate a follow-up question for a student studying $subject.
-Previous question: ${widget.assessmentData['questions'][currentQuestionIndex]['question']}
-Student ${isCorrect ? 'answered correctly' : 'struggled with this'}.
-Difficulty: ${isCorrect ? 'slightly harder' : 'similar difficulty'}
-Topic: ${widget.subject}
-
-Generate a JSON response with format: {"question": "...", "options": ["...", "...", "...", "..."], "correctAnswer": "..."}
-Make it educational and appropriate.
-''';
-
-        final nextQuestionJson =
-            await AIService.getAIResponse(nextQuestionPrompt);
-
-        try {
-          // Parse AI-generated question
-          final Map<String, dynamic> newQuestion = jsonDecode(nextQuestionJson);
-
-          setState(() {
-            currentQuestionIndex++;
-            aiFeedback = feedback;
-            // Add AI-generated question to the list
-            widget.assessmentData['questions'].add(newQuestion);
-            isLoading = false;
-          });
-        } catch (e) {
-          // If JSON parsing fails, just move to next pre-defined question
-          setState(() {
-            currentQuestionIndex++;
-            aiFeedback = feedback;
-            isLoading = false;
-          });
-        }
-      }
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-        aiFeedback = "AI feedback unavailable. Moving to next question.";
-      });
-
-      // Still move to next question even if AI fails
-      if (currentQuestionIndex + 1 <
-          widget.assessmentData['questions'].length) {
-        Future.delayed(const Duration(seconds: 1), () {
-          setState(() {
-            currentQuestionIndex++;
-          });
-        });
-      } else {
-        setState(() {
-          isAssessmentComplete = true;
-        });
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-              'AI service: ${e.toString().substring(0, min(50, e.toString().length))}...'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    }
-  }
-
-  Future<String> _getAssessmentSummary() async {
-    try {
-      // Create a summary of the assessment
-      final correctAnswers =
-          userAnswers.where((a) => a['answer'] == a['correct_answer']).length;
-
-      final summaryPrompt = '''
-Assessment completed for subject: ${widget.subject}
-Total questions: ${userAnswers.length}
-Correct answers: $correctAnswers
-Topics covered: ${widget.subject}
-
-Provide a brief, encouraging 2-sentence summary of the student's performance.
-''';
-
-      return await AIService.getAIResponse(summaryPrompt);
-    } catch (e) {
-      return "Great job completing the assessment! Keep practicing to improve further.";
-    }
-  }
-
-  void _saveAssessmentResults() {
-    // Calculate score
-    final correctCount =
-        userAnswers.where((a) => a['answer'] == a['correct_answer']).length;
-
-    final score = (correctCount / userAnswers.length * 100).round();
-
-    final results = {
-      'subject': widget.subject,
-      'date': DateTime.now().toIso8601String(),
-      'score': score,
-      'total_questions': userAnswers.length,
-      'correct_answers': correctCount,
-      'answers': userAnswers,
-    };
-
-    // Save to local storage
-    print('Assessment results: $results');
-
-    // TODO: Save to SharedPreferences or local database
   }
 }

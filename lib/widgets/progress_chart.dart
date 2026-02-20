@@ -196,7 +196,7 @@ class ProgressChart extends StatelessWidget {
       children: weeklyData.asMap().entries.map((entry) {
         final index = entry.key;
         final value = entry.value;
-        final x = index * stepX;
+        //final x = index * stepX;
         final y = value / 100.0;
 
         return Expanded(

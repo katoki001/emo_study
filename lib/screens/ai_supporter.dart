@@ -1,4 +1,6 @@
+// lib/screens/ai_supporter_screen.dart
 import 'package:flutter/material.dart';
+import '../services/ai_service.dart';
 
 class AISupporterScreen extends StatefulWidget {
   const AISupporterScreen({super.key});
@@ -10,81 +12,39 @@ class AISupporterScreen extends StatefulWidget {
 class _AISupporterScreenState extends State<AISupporterScreen> {
   final TextEditingController _messageController = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
+  bool _isTyping = false;
+
+  void _sendMessage() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+
+    setState(() {
+      _messages.add({'text': text, 'isUser': true});
+      _isTyping = true;
+    });
+    _messageController.clear();
+
+    // Get real response from AIService
+    final response = await AIService.getAIResponse(text);
+
+    setState(() {
+      _isTyping = false;
+      _messages.add({
+        'text': response,
+        'isUser': false,
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // AI Assistant Header
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.1),
-                blurRadius: 10,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          margin: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: Colors.blue[100],
-                child: const Icon(Icons.assistant, color: Colors.blue),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'AI Learning Assistant',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[800],
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Ask me anything about your studies!',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Quick Actions
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: [
-              _buildQuickAction('Explain concept', Icons.lightbulb),
-              _buildQuickAction('Solve problem', Icons.psychology),
-              _buildQuickAction('Study tips', Icons.tips_and_updates),
-              _buildQuickAction('Motivation', Icons.favorite),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Chat Messages
+        _buildHeader(),
+        _buildQuickActions(),
         Expanded(
           child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
+            margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -100,146 +60,110 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
             ),
           ),
         ),
-
-        // Message Input
-        Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.white,
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _messageController,
-                  decoration: InputDecoration(
-                    hintText: 'Ask your question...',
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              CircleAvatar(
-                backgroundColor: Colors.deepPurple,
-                child: IconButton(
-                  icon: const Icon(Icons.send, color: Colors.white),
-                  onPressed: _sendMessage,
-                ),
-              ),
-            ],
+        if (_isTyping)
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8.0),
+            child: Text("AI is thinking...",
+                style:
+                    TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
           ),
-        ),
+        _buildInputArea(),
       ],
     );
   }
 
-  Widget _buildQuickAction(String title, IconData icon) {
-    return InkWell(
-      onTap: () {
-        _messageController.text = title;
-        _sendMessage();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.deepPurple[50],
-          borderRadius: BorderRadius.circular(15),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 18, color: Colors.deepPurple),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: TextStyle(
-                color: Colors.deepPurple,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMessageBubble(Map<String, dynamic> message) {
-    bool isUser = message['isUser'];
-
+  Widget _buildHeader() {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(20),
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)],
+      ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (!isUser)
-            CircleAvatar(
+          CircleAvatar(
               backgroundColor: Colors.blue[100],
-              radius: 16,
-              child: const Icon(Icons.assistant, size: 18, color: Colors.blue),
-            ),
-          Expanded(
-            child: Container(
-              margin: EdgeInsets.only(
-                left: isUser ? 40 : 8,
-                right: isUser ? 8 : 40,
-              ),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isUser ? Colors.deepPurple[50] : Colors.blue[50],
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Text(
-                message['text'],
-                style: TextStyle(
-                  color: isUser ? Colors.deepPurple[900] : Colors.blue[900],
-                ),
-              ),
-            ),
-          ),
-          if (isUser)
-            const CircleAvatar(
-              backgroundColor: Colors.deepPurple,
-              radius: 16,
-              child: Icon(Icons.person, size: 18, color: Colors.white),
-            ),
+              child: const Icon(Icons.assistant, color: Colors.blue)),
+          const SizedBox(width: 16),
+          const Text('AI Learning Assistant',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  void _sendMessage() {
-    if (_messageController.text.trim().isEmpty) return;
-
-    setState(() {
-      _messages.add({
-        'text': _messageController.text,
-        'isUser': true,
-      });
-    });
-
-    // Call Python AI API
-    _getAIResponse(_messageController.text);
-
-    _messageController.clear();
+  Widget _buildQuickActions() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _quickActionChip('Explain photosynthesis'),
+          const SizedBox(width: 8),
+          _quickActionChip('Math help'),
+          const SizedBox(width: 8),
+          _quickActionChip('Study tips'),
+        ],
+      ),
+    );
   }
 
-  void _getAIResponse(String message) {
-    // Call your Python AI backend
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _messages.add({
-          'text':
-              'I understand you\'re asking about: $message\n\nBased on your learning style, I suggest focusing on interactive exercises. Would you like me to create a practice set?',
-          'isUser': false,
-        });
-      });
-    });
+  Widget _quickActionChip(String label) {
+    return ActionChip(
+      label: Text(label),
+      onPressed: () {
+        _messageController.text = label;
+        _sendMessage();
+      },
+    );
+  }
+
+  Widget _buildMessageBubble(Map<String, dynamic> message) {
+    bool isUser = message['isUser'];
+    return Align(
+      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        decoration: BoxDecoration(
+          color: isUser ? Colors.deepPurple[100] : Colors.blue[100],
+          borderRadius: BorderRadius.circular(15),
+        ),
+        child: Text(message['text']),
+      ),
+    );
+  }
+
+  Widget _buildInputArea() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              decoration: InputDecoration(
+                hintText: 'Ask me anything...',
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          FloatingActionButton(
+            onPressed: _sendMessage,
+            mini: true,
+            backgroundColor: Colors.deepPurple,
+            child: const Icon(Icons.send, color: Colors.white),
+          ),
+        ],
+      ),
+    );
   }
 }

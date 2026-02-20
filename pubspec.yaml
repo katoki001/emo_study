@@ -13,11 +13,7 @@ dependencies:
   fl_chart: ^0.65.0  # For charts
   http: ^0.13.6      # For API calls to Python backend
   audioplayers: ^5.2.1  # For ambient sounds
-
-<<<<<<< HEAD
-
-=======
->>>>>>> ce5070b869046ab54d30a321324ea2f9478057c9
+  
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -7,7 +7,7 @@ Original file is located at
     https://colab.research.google.com/drive/1EaymXzLcJ1pLGuLRLZAkhduJk2ya0mWl
 """
 
-!pip install faiss-cpu
+#pip install faiss-cpu
 
 import numpy as np
 import torch
@@ -228,11 +228,11 @@ demo = gr.Interface(
 # THIS CREATES THE PUBLIC URL
 demo.launch(share=True, debug=True)
 
-!pip install -q gradio transformers torch accelerate
+#pip install -q gradio transformers torch accelerate
 
-"""# ***TG***"""
 
-from telegram import Update
+
+"""from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
     MessageHandler,
@@ -240,7 +240,7 @@ from telegram.ext import (
     filters
 )
 
-BOT_TOKEN = "8587589105:AAGJ4eIEwKm5JQ_NiS0GRCF5pv2gb6Q9aM4"
+BOT_TOKEN = "XXXX"
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -285,4 +285,4 @@ app = ApplicationBuilder().token(BOT_TOKEN).build()
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 print("Bot is running...")
-app.run_polling()
+app.run_polling()"""

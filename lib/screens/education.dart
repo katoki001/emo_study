@@ -1,7 +1,9 @@
+// lib/screens/education_screen.dart
 import 'package:flutter/material.dart';
 import '../widgets/subject_card.dart';
 import '../screens/assessment_screen.dart';
-import '../widgets/loading_dialog.dart';
+import '../services/ai_service.dart'; // Import your AI Service
+import 'dart:convert';
 
 class EducationScreen extends StatelessWidget {
   EducationScreen({super.key});
@@ -12,42 +14,42 @@ class EducationScreen extends StatelessWidget {
       'icon': Icons.rocket_launch,
       'color': Colors.blue,
       'description': 'AI will assess your physics knowledge',
-      'progress': 0.0,
+      'progress': 0.0
     },
     {
       'subject': 'Mathematics',
       'icon': Icons.calculate,
       'color': Colors.green,
       'description': 'AI will assess your math skills',
-      'progress': 0.0,
+      'progress': 0.0
     },
     {
       'subject': 'Chemistry',
       'icon': Icons.science,
       'color': Colors.orange,
       'description': 'AI will assess your chemistry knowledge',
-      'progress': 0.0,
+      'progress': 0.0
     },
     {
       'subject': 'Biology',
       'icon': Icons.eco,
       'color': Colors.purple,
       'description': 'AI will assess your biology understanding',
-      'progress': 0.0,
+      'progress': 0.0
     },
     {
       'subject': 'Computer Science',
       'icon': Icons.computer,
       'color': Colors.red,
       'description': 'AI will assess your coding skills',
-      'progress': 0.0,
+      'progress': 0.0
     },
     {
       'subject': 'History',
       'icon': Icons.history,
       'color': Colors.brown,
       'description': 'AI will assess your historical knowledge',
-      'progress': 0.0,
+      'progress': 0.0
     },
   ];
 
@@ -70,16 +72,14 @@ class EducationScreen extends StatelessWidget {
           ),
           itemCount: subjects.length,
           itemBuilder: (context, index) {
-            final subject = subjects[index];
+            final subjectData = subjects[index];
             return SubjectCard(
-              subject: subject['subject'],
-              icon: subject['icon'],
-              color: subject['color'],
-              description: subject['description'],
-              progress: subject['progress'],
-              onTap: () {
-                //_startAIAssessment(context, subject['subject']);
-              },
+              subject: subjectData['subject'],
+              icon: subjectData['icon'],
+              color: subjectData['color'],
+              description: subjectData['description'],
+              progress: subjectData['progress'],
+              onTap: () => _startAIAssessment(context, subjectData['subject']),
             );
           },
         ),
@@ -87,50 +87,47 @@ class EducationScreen extends StatelessWidget {
     );
   }
 
-  /* Future<void> _startAIAssessment(BuildContext context, String subject) async {
-    // Show loading dialog
+  Future<void> _startAIAssessment(BuildContext context, String subject) async {
+    // 1. Show Loading Dialog
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const LoadingDialog(
-        message: 'Preparing AI Assessment...',
-      ),
+      builder: (context) => const Center(child: CircularProgressIndicator()),
     );
 
     try {
-      // Call AI backend API
-      final assessmentData = await AssessmentAPI.startAssessment(
-        subject: subject,
-        difficulty: 'adaptive', // or get from user preferences
-      );
+      // 2. Request initial question from AI
+      final prompt =
+          '''Generate a starter multiple choice question for the subject: $subject. 
+      Return ONLY JSON format: {"question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "..."}''';
 
-      // Close loading dialog
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
+      final aiResponse = await AIService.getAIResponse(prompt);
 
-      // Navigate to assessment screen
+      // Clean and Parse JSON
+      final cleanJson = aiResponse.substring(
+          aiResponse.indexOf('{'), aiResponse.lastIndexOf('}') + 1);
+      final firstQuestion = jsonDecode(cleanJson);
+
+      // 3. Close Loading
+      if (context.mounted) Navigator.of(context).pop();
+
+      // 4. Navigate to Assessment Screen
       if (context.mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => AssessmentScreen(
               subject: subject,
-              assessmentData: assessmentData,
+              assessmentData: {
+                "questions": [firstQuestion]
+              },
             ),
           ),
         );
       }
     } catch (e) {
-      // Close loading dialog
-      if (context.mounted) {
-        Navigator.of(context).pop();
-      }
-
-      // Show error message
-      if (context.mounted) {
-        _showErrorDialog(context, e.toString());
-      }
+      if (context.mounted) Navigator.of(context).pop();
+      _showErrorDialog(context, e.toString());
     }
   }
 
@@ -138,17 +135,15 @@ class EducationScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Assessment Error'),
-        content: Text(
-          'Failed to start assessment: $error\n\nPlease try again later.',
-        ),
+        title: const Text('Connection Error'),
+        content: const Text(
+            'Could not reach the AI. Is your Colab Gradio link still active?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Retry'))
         ],
       ),
     );
-  }*/
+  }
 }
