@@ -7,6 +7,9 @@ class SubjectCard extends StatelessWidget {
   final String description;
   final double progress;
   final VoidCallback onTap;
+  final VoidCallback? onUploadLecture;
+  final VoidCallback? onAiHelper;
+  final VoidCallback? onSchedule;
 
   const SubjectCard({
     super.key,
@@ -16,13 +19,15 @@ class SubjectCard extends StatelessWidget {
     required this.description,
     required this.progress,
     required this.onTap,
+    this.onUploadLecture,
+    this.onAiHelper,
+    this.onSchedule,
   });
 
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
-    // Dynamic sizing based on screen width
-    final bool isSmallScreen = screenWidth < 380; 
+    final bool isSmallScreen = screenWidth < 380;
 
     return Card(
       elevation: 3,
@@ -57,13 +62,9 @@ class SubjectCard extends StatelessWidget {
                       color: color.withOpacity(0.2),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(icon, color: color, size: isSmallScreen ? 20 : 24),
+                    child:
+                        Icon(icon, color: color, size: isSmallScreen ? 20 : 24),
                   ),
-                  if (progress > 0)
-                    _Badge(
-                      text: '${(progress * 100).toInt()}%',
-                      color: _getProgressColor(progress),
-                    ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -90,29 +91,31 @@ class SubjectCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const SizedBox(height: 8),
-              // Progress Bar or Start Button
-              if (progress > 0) ...[
-                LinearProgressIndicator(
-                  value: progress,
-                  backgroundColor: Colors.grey[200],
-                  valueColor: AlwaysStoppedAnimation<Color>(_getProgressColor(progress)),
-                  borderRadius: BorderRadius.circular(10),
-                  minHeight: 4,
-                ),
-              ] else ...[
-                Center(
-                  child: Text(
-                    'START',
-                    style: TextStyle(
-                      color: color,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                      letterSpacing: 1.2,
-                    ),
+              const SizedBox(height: 10),
+              // Action Buttons Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _ActionButton(
+                    icon: Icons.upload_file_rounded,
+                    label: 'Lecture',
+                    color: color,
+                    onTap: onUploadLecture,
                   ),
-                ),
-              ],
+                  _ActionButton(
+                    icon: Icons.auto_awesome_rounded,
+                    label: 'AI Help',
+                    color: color,
+                    onTap: onAiHelper,
+                  ),
+                  _ActionButton(
+                    icon: Icons.calendar_month_rounded,
+                    label: 'Schedule',
+                    color: color,
+                    onTap: onSchedule,
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -124,6 +127,57 @@ class SubjectCard extends StatelessWidget {
     if (progress >= 0.8) return Colors.green;
     if (progress >= 0.5) return Colors.blue;
     return Colors.orange;
+  }
+}
+
+/// A compact icon+label button used in the action row.
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        child: Material(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, color: color, size: 16),
+                  const SizedBox(height: 2),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -142,7 +196,11 @@ class _Badge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }

@@ -7,19 +7,36 @@ Original file is located at
     https://colab.research.google.com/drive/1EaymXzLcJ1pLGuLRLZAkhduJk2ya0mWl
 """
 
-#pip install faiss-cpu
+!pip install faiss-cpu
 
+"""Imports"""
+
+#used probobly everywhere
 import numpy as np
 import torch
+import pandas as pd
 from sentence_transformers import SentenceTransformer
+import faiss
+from transformers import AutoModelForCausalLM, AutoTokenizer
+import gc
+import json
+
+#for documents
+import random
+import threading
+import fitz
+from docx import Document as DocxDocument
+import textwrap
+
+"""Embedding generating"""
 
 def generate_embeddings():
-    df = pd.read_csv("physics_clean_dataset.csv", usecols=["text_content"])
+    df = pd.read_csv("physics_clean_categorized.csv", usecols=["text_content"])
     df = df.head(3000)
     sentences = df["text_content"].tolist()
 
     model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2", device="cpu")
-    torch.set_num_threads(4)
+    torch.set_num_threads(4)te
 
     embeddings = model.encode(
         sentences,
@@ -36,8 +53,7 @@ def generate_embeddings():
 
 generate_embeddings()
 
-import faiss
-import numpy as np
+"""Clustering embeddings better with faiss"""
 
 emb = np.load("light_embeddings.npy").astype("float32")
 
@@ -46,11 +62,6 @@ index.add(emb)
 faiss.write_index(index, "physics_index.faiss")
 
 print("FAISS index saved")
-
-import faiss
-import numpy as np
-import pandas as pd
-from sentence_transformers import SentenceTransformer
 
 texts = pd.read_csv("physics_texts.csv")["text_content"].tolist()
 index = faiss.read_index("physics_index.faiss")
@@ -66,21 +77,8 @@ def answer_question(question):
     combined = "\n---\n".join(chunks)
     return f"Relevant physics information:\n\n{combined}"
 
-# =======================
-# Imports
-# =======================
-import faiss
-import numpy as np
-import pandas as pd
-from sentence_transformers import SentenceTransformer
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
-import gc
+"""LLM part"""
 
-
-# =======================
-# Load data & models
-# =======================
 texts = pd.read_csv("physics_texts.csv")["text_content"].tolist()
 index = faiss.read_index("physics_index.faiss")
 
@@ -99,10 +97,12 @@ llm = AutoModelForCausalLM.from_pretrained(
     low_cpu_mem_usage=True
 )
 
+def retrieve(query, k=5):
+    q_emb = embed_model.encode([query]).astype("float32")
+    _, I = index.search(q_emb, k)
+    chunks = []
 
-# =======================
-# Helper functions
-# =======================
+#it's an numerical problem
 def is_numerical_problem(question: str) -> bool:
     keywords = [
         "calculate", "determine", "find",
@@ -111,178 +111,146 @@ def is_numerical_problem(question: str) -> bool:
     ]
     return any(k in question.lower() for k in keywords)
 
-def retrieve(query, k=2):
-    q_emb = embed_model.encode([query]).astype("float32")
-    _, I = index.search(q_emb, k)
+#question answering
+def answer_question(question: str):
+    chunks, links = retrieve(question, 5)
+    context = "\n\n".join(chunks)
 
-    context_chunks = []
-    links = []
-
-    for i in I[0]:
-        text = texts[i]
-        # If the text contains your custom YouTube separator, treat it as a link
-        if " — http" in text:
-            links.append(text)
-        else:
-            context_chunks.append(text[:600])
-
-    return context_chunks, links
-
-
-# =======================
-# Core generation
-# =======================
-def generate_explanation(question, context, links):
-    q_low = question.lower()
-
-    # Mode 1: Schedule & Verification
-    if any(w in q_low for w in ["schedule", "plan", "test me", "verify", "3 day"]):
-        system_prompt = """You are a physics tutor.
-        1. Ask the user 2 concept questions to verify their knowledge.
-        2. Provide a 3-day study schedule based on the context.
-        Format:
-        ### 1. Verification Questions
-        ### 2. 3-Day Schedule"""
-
-    # Mode 2: Solving
-    elif is_numerical_problem(question):
-        system_prompt = """You are a strict Physics Tutor for beginners.
-1. Use ONLY: Work = Force * Distance.
-2. Units: Force in Newtons (N), Distance in Meters (m), Work in Joules (J).
-3. DO NOT use time (s) in your calculation.
-4. Calculate carefully:
-5. Provide ONLY the requested sections.
-        Solve the problem using this format.
-        ### 1. Given
-        ### 2. Formula
-        ### 3. Solution
-        ### 4. Final Answer """
+    #numerical
+    if is_numerical_problem(question):
+        system_prompt = "You are a strict Physics Tutor. Format: ### 1. Given, ### 2. Formula, ### 3. Solution, ### 4. Final Answer."
+    #ususal theory question
     else:
         system_prompt = "You are a physics tutor. Provide a detailed Explanation and 4-7 bulleted Key Points."
 
-    # Prepare messages for Chat Template
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"Context:\n{context}\n\nQuestion:\n{question}"}
-    ]
-
-    # Apply template and tokenize
+    messages = [{"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Context:\n{context}\n\nQuestion:\n{question}"}]
+    #tokenisation and answer generating
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    inputs = tokenizer(prompt, return_tensors="pt").to("cpu") # Ensure it's on CPU as per your setup
-
-    # GENERATION FIX: Added do_sample=True and pad_token_id
-    outputs = llm.generate(
-        **inputs,
-        max_new_tokens=450,
-        temperature=0.2,
-        do_sample=True, # Required to use temperature
-        pad_token_id=tokenizer.eos_token_id
-    )
-
-    # Decode only the new tokens
+    inputs = tokenizer(prompt, return_tensors="pt").to("cpu")
+    outputs = llm.generate(**inputs, max_new_tokens=450, temperature=0.2, do_sample=True, pad_token_id=tokenizer.eos_token_id)
     response = tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True)
 
-    # Mode 3: Add Links (Read/Watch section)
-    link_section = ""
-    if links:
-        link_section = "\n\n### 3. Study Resources (Watch & Read)\n" + "\n".join([f"• {l}" for l in links])
+#fleshcards, for studing
+def generate_flashcards_from_text(text: str, num_cards: int = 5) -> list[dict]:
+    messages = [
+        {"role": "system", "content": 'Return ONLY a raw JSON array of objects with "question" and "answer" keys.'},
+        {"role": "user", "content": f"Create {num_cards} flashcards from this text:\n\n{text[:2000]}"}
+    ]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer(prompt, return_tensors="pt").to("cpu")
+    outputs = llm.generate(**inputs, max_new_tokens=600, temperature=0.3, do_sample=True, pad_token_id=tokenizer.eos_token_id)
+    raw = tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True).strip()
+    try:
+        start, end = raw.index("["), raw.rindex("]") + 1
+        return json.loads(raw[start:end])
+    except:
+        return [{"question": "Error", "answer": "Could not generate flashcards."}]
 
-    return response.strip() + link_section
+"""new feature document reading and summrising"""
+
+#getting and reading document
+def read_document(file_path: str) -> str:
+    ext = file_path.lower().split(".")[-1]
+    if ext == "pdf":
+        doc = fitz.open(file_path)
+        text = "".join(page.get_text() for page in doc)
+        doc.close()
+        return text.strip()
+    elif ext == "docx":
+        doc = DocxDocument(file_path)
+        return "\n".join(para.text for para in doc.paragraphs if para.text.strip())
+    elif ext in ("txt", "md"):
+        with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+            return f.read()
+    else:
+        raise ValueError(f"Unsupported file type: .{ext}")
+
+#splits text into chunks to tokenize easier
+def chunk_text(text: str, max_chars: int = 2500) -> list[str]:
+    sentences = text.replace("\n", " ").split(". ")
+    chunks, current = [], ""
+    for sent in sentences:
+        if len(current) + len(sent) < max_chars:
+            current += sent + ". "
+        else:
+            if current: chunks.append(current.strip())
+            current = sent + ". "
+    if current: chunks.append(current.strip())
+    return chunks
+
+#summarization of chunck
+def summarize_chunk(chunk: str) -> str:
+    messages = [
+        {"role": "system", "content": "You are an expert academic summarizer. Use plain prose."},
+        {"role": "user", "content": f"Write a focused 3-5 sentence summary of this passage:\n\n{chunk}"}
+    ]
+    prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    inputs = tokenizer(prompt, return_tensors="pt").to("cpu")
+    outputs = llm.generate(**inputs, max_new_tokens=200, temperature=0.1, do_sample=True, pad_token_id=tokenizer.eos_token_id)
+    return tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True).strip()
 
 
-def answer_question(question: str):
-    chunks, links = retrieve(question, 5) # Increased k to find both text and links
-    context = "\n\n".join(chunks)
-    return generate_explanation(question, context, links)
+#full summarization
+def summarize_document(file_path: str) -> str:
+    raw_text = read_document(file_path)
+    chunks = chunk_text(raw_text)
+    chunk_summaries = [summarize_chunk(c) for c in chunks]
 
-import torch
-import gc
+    if len(chunk_summaries) > 1:
+        combined = "\n\n".join(chunk_summaries)
+        messages = [
+            {"role": "system", "content": "Combine these partial summaries into one coherent final summary."},
+            {"role": "user", "content": f"Summaries:\n{combined}"}
+        ]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer(prompt, return_tensors="pt").to("cpu")
+        outputs = llm.generate(**inputs, max_new_tokens=350, temperature=0.1, do_sample=True, pad_token_id=tokenizer.eos_token_id)
+        return tokenizer.decode(outputs[0][inputs["input_ids"].shape[-1]:], skip_special_tokens=True).strip()
+    return chunk_summaries[0]
 
 def clean_memory():
     torch.cuda.empty_cache()
     gc.collect()
-
-print(answer_question(input()))
-
 clean_memory()
 
-# Launch with public URL
-import gradio as gr  # <-- THIS WAS MISSING
-from transformers import AutoModelForCausalLM, AutoTokenizer
-import torch
-def api_handler(prompt):
-    try:
-        result = generate_text(prompt)
-        return result
-    except Exception as e:
-        return f"Error: {str(e)}"
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from pyngrok import ngrok, conf
 
-demo = gr.Interface(
-    fn=api_handler,
-    inputs=gr.Textbox(label="Your Prompt"),
-    outputs=gr.Textbox(label="LLM Response"),
-    title="My LLM API",
-    description="Send prompts via HTTP to this endpoint"
-)
+app = Flask(__name__)
+CORS(app)
 
-# THIS CREATES THE PUBLIC URL
-demo.launch(share=True, debug=True)
+@app.route('/chat', methods=['POST'])
+def api_chat():
+    msg = request.json.get('message', '')
+    return jsonify({'response': answer_question(msg)})
 
-#pip install -q gradio transformers torch accelerate
+@app.route('/summarize', methods=['POST'])
+def api_summarize():
+    path = request.json.get('file_path', '')
+    if not os.path.exists(path): return jsonify({'error': 'File not found'}), 404
+    return jsonify({'summary': summarize_document(path)})
 
+@app.route('/study', methods=['POST'])
+def api_study():
+    source = request.json.get('source', '')
+    num = request.json.get('num_cards', 5)
+    if os.path.isfile(source):
+        text = read_document(source)
+    else:
+        chunks, _ = retrieve(source, k=3)
+        text = "\n".join(chunks)
+    return jsonify({'flashcards': generate_flashcards_from_text(text, num)})
 
+@app.route('/health', methods=['GET'])
+def health(): return jsonify({'status': 'ok'})
 
-"""from telegram import Update
-from telegram.ext import (
-    ApplicationBuilder,
-    MessageHandler,
-    ContextTypes,
-    filters
-)
+# ============================================================
+# 6. RUN SERVER
+# ============================================================
+!kill -9 $(lsof -t -i:5000) 2>/dev/null
+public_url = ngrok.connect(5000)
+print(f"\n✅ PHYSICS API LIVE: {public_url}")
 
-BOT_TOKEN = "XXXX"
-
-
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_text = update.message.text
-    if not user_text:
-        return
-
-    await update.message.reply_text("⏳ Thinking...")
-
-    try:
-        answer = answer_question(user_text)
-        await update.message.reply_text(answer)
-    except Exception as e:
-        await update.message.reply_text("⚠️ Error occurred.")
-        print(e)
-
-    clean_memory()
-
-
-async def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
-    )
-    print("🤖 Physics bot is running...")
-    await app.run_polling()
-
-
-import nest_asyncio
-nest_asyncio.apply()
-
-await main()
-
-!pip install -U python-telegram-bot==20.7
-
-!pip install nest_asyncio
-import nest_asyncio
-
-nest_asyncio.apply()
-
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-
-print("Bot is running...")
-app.run_polling()"""
+threading.Thread(target=lambda: app.run(port=5000, use_reloader=False, host='0.0.0.0')).start()

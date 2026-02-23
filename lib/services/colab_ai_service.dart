@@ -85,7 +85,8 @@ class ChatResult {
 
 class ColabAIService {
   // ⚠️  Update this every time you restart Colab (ngrok gives a new URL)
-  static const String baseUrl = 'https://XXXX-XX-XX-XX-XX.ngrok-free.app';
+  static const String baseUrl =
+      "https://unprotestingly-uninformative-earlean.ngrok-free.dev";
 
   static Future<ChatResult> sendMessage(String message) async {
     try {
