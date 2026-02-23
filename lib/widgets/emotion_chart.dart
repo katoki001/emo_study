@@ -12,7 +12,7 @@ class EmotionChart extends StatelessWidget {
       child: Column(
         children: [
           SizedBox(
-            height: 44, // Reduced from 150
+            height: 44,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -21,10 +21,7 @@ class EmotionChart extends StatelessWidget {
               }).toList(),
             ),
           ),
-
           const SizedBox(height: 12),
-
-          // Combined labels and scores in one row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: data.entries.map((entry) {
@@ -63,17 +60,17 @@ class EmotionChart extends StatelessWidget {
   Widget _buildBar(String label, double value) {
     double percentage = value / 12.0;
     Color color = _getColorForScore(value);
-    const barHeight = 55.0; // Reduced max height
+    const barHeight = 55.0;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         Container(
-          width: 20, // Reduced from 40
+          width: 20,
           height: barHeight * percentage,
           decoration: BoxDecoration(
             color: color.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(6), // Smaller radius
+            borderRadius: BorderRadius.circular(6),
             gradient: LinearGradient(
               begin: Alignment.bottomCenter,
               end: Alignment.topCenter,
@@ -89,7 +86,6 @@ class EmotionChart extends StatelessWidget {
   }
 
   String _getShortLabel(String label) {
-    // Shorten long labels
     if (label == 'Stress Resilience') return 'Stress';
     if (label == 'Motivation') return 'Motiv.';
     return label;

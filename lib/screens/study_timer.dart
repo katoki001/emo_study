@@ -29,11 +29,11 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          const SizedBox(height: 20),
           // TIMER CIRCLE
           Container(
             width: 240,

@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
-import 'ai_supporter.dart';
+import 'package:provider/provider.dart';
+import 'ai_supporter_screen.dart';
 import 'education.dart';
-import 'progress.dart';
 import 'study_timer.dart';
+import 'music_player_screen.dart';
+import '../providers/music_player_provider.dart';
+import '../widgets/mini_player.dart';
+import 'wellness_screen.dart'; // ADD THIS IMPORT
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,14 +21,14 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = [
     EducationScreen(),
     const AISupporterScreen(),
-    const ProgressScreen(),
+    const WellnessScreen(),
     const StudyTimerScreen(),
   ];
 
   final List<String> _appBarTitles = [
     'Education Hub',
     'AI Supporter',
-    'Progress Dashboard',
+    'Wellness',
     'Study Timer'
   ];
 
@@ -42,12 +46,44 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.deepPurple[50],
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.music_note),
-            onPressed: () {
-              // Open music player
+          // Music button with status indicator
+          Consumer<MusicPlayerProvider>(
+            builder: (context, musicProvider, child) {
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  IconButton(
+                    icon: Icon(
+                      musicProvider.isPlaying
+                          ? Icons.music_note
+                          : Icons.music_note_outlined,
+                      color: musicProvider.isPlaying
+                          ? Colors.deepPurple
+                          : Colors.grey[700],
+                    ),
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/playlist');
+                    },
+                    tooltip: musicProvider.isPlaying
+                        ? 'Now Playing: ${musicProvider.currentMusic?.title ?? "Music"}'
+                        : 'Open Music Player',
+                  ),
+                  if (musicProvider.isPlaying)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                ],
+              );
             },
-            tooltip: 'Music Player',
           ),
           IconButton(
             icon: const Icon(Icons.settings),
@@ -69,7 +105,23 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        child: _screens[_selectedIndex],
+        child: Column(
+          children: [
+            // Mini player shows when music is playing
+            Consumer<MusicPlayerProvider>(
+              builder: (context, musicProvider, child) {
+                if (musicProvider.currentMusic != null) {
+                  return const MiniPlayer();
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+            // Main content
+            Expanded(
+              child: _screens[_selectedIndex],
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
@@ -91,8 +143,8 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'AI Helper',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            label: 'Progress',
+            icon: Icon(Icons.favorite_outline),
+            label: 'Wellness',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.timer),
