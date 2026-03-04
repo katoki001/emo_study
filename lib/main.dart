@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:flutter_web_plugins/url_strategy.dart';
 import 'screens/home_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/playlist_screen.dart';
@@ -14,6 +14,9 @@ import 'providers/music_player_provider.dart';
 import 'providers/settings_provider.dart';
 
 void main() async {
+  usePathUrlStrategy();
+  runApp(MyApp());
+
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
