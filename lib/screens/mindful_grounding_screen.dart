@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import '../l10n/app_strings.dart';
 
 class MindfulGroundingScreen extends StatefulWidget {
-  const MindfulGroundingScreen({super.key});
+  final String lang;
+  final bool isDark;
+  const MindfulGroundingScreen(
+      {super.key, this.lang = 'en', this.isDark = true});
 
   @override
   State<MindfulGroundingScreen> createState() => _MindfulGroundingScreenState();
@@ -18,47 +22,46 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
   bool _started = false;
   bool _finished = false;
 
-  // Steps: sense name, count, color, emoji
-  final List<Map<String, dynamic>> _steps = [
-    {
-      'sense': 'See',
-      'prompt': 'Look around and name things you can see',
-      'count': 5,
-      'color': const Color(0xFF6FBBFF),
-      'emoji': '👁️',
-    },
-    {
-      'sense': 'Touch',
-      'prompt': 'Notice things you can physically touch or feel',
-      'count': 4,
-      'color': const Color(0xFF8B6FFF),
-      'emoji': '✋',
-    },
-    {
-      'sense': 'Hear',
-      'prompt': 'Listen carefully for sounds around you',
-      'count': 3,
-      'color': const Color(0xFF6FFFD4),
-      'emoji': '👂',
-    },
-    {
-      'sense': 'Smell',
-      'prompt': 'Notice any scents or smells in the air',
-      'count': 2,
-      'color': const Color(0xFFFFB86F),
-      'emoji': '👃',
-    },
-    {
-      'sense': 'Taste',
-      'prompt': 'Notice any taste in your mouth right now',
-      'count': 1,
-      'color': const Color(0xFFFF6F9C),
-      'emoji': '👅',
-    },
-  ];
+  List<Map<String, dynamic>> get _steps => [
+        {
+          'sense': AppStrings.get('mg_see', widget.lang),
+          'prompt': AppStrings.get('mg_see_prompt', widget.lang),
+          'count': 5,
+          'color': const Color(0xFF6FBBFF),
+          'emoji': '👁️',
+        },
+        {
+          'sense': AppStrings.get('mg_touch', widget.lang),
+          'prompt': AppStrings.get('mg_touch_prompt', widget.lang),
+          'count': 4,
+          'color': const Color(0xFF8B6FFF),
+          'emoji': '✋',
+        },
+        {
+          'sense': AppStrings.get('mg_hear', widget.lang),
+          'prompt': AppStrings.get('mg_hear_prompt', widget.lang),
+          'count': 3,
+          'color': const Color(0xFF6FFFD4),
+          'emoji': '👂',
+        },
+        {
+          'sense': AppStrings.get('mg_smell', widget.lang),
+          'prompt': AppStrings.get('mg_smell_prompt', widget.lang),
+          'count': 2,
+          'color': const Color(0xFFFFB86F),
+          'emoji': '👃',
+        },
+        {
+          'sense': AppStrings.get('mg_taste', widget.lang),
+          'prompt': AppStrings.get('mg_taste_prompt', widget.lang),
+          'count': 1,
+          'color': const Color(0xFFFF6F9C),
+          'emoji': '👅',
+        },
+      ];
 
   int _currentStep = 0;
-  int _remaining = 5; // taps left for current step
+  int _remaining = 5;
 
   @override
   void initState() {
@@ -108,14 +111,12 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
   void _onCircleTap() async {
     if (!_started || _finished) return;
 
-    // Tap animation
     await _tapController.forward();
     _tapController.reverse();
 
     final newRemaining = _remaining - 1;
 
     if (newRemaining <= 0) {
-      // Move to next step
       final nextStep = _currentStep + 1;
       if (nextStep >= _steps.length) {
         setState(() {
@@ -142,20 +143,40 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
 
   @override
   Widget build(BuildContext context) {
-    final step = _steps[_currentStep];
+    final isDark = widget.isDark;
+    final steps = _steps;
+    final step = steps[_currentStep];
     final color = step['color'] as Color;
     final totalForStep = step['count'] as int;
     final progress = _started && !_finished
         ? (totalForStep - _remaining) / totalForStep
         : 0.0;
 
+    // Theme-aware colors
+    final scaffoldBg =
+        isDark ? const Color(0xFF0D1B2A) : const Color(0xFFF0F6FF);
+    final cardBg = isDark ? Colors.white.withOpacity(0.07) : Colors.white;
+    final cardBorder =
+        isDark ? Colors.white.withOpacity(0.1) : Colors.blue.withOpacity(0.15);
+    final titleColor = isDark ? Colors.white : const Color(0xFF0D1B2A);
+    final subtitleColor = isDark ? Colors.white70 : Colors.black54;
+    final dotInactive = isDark
+        ? Colors.white.withOpacity(0.15)
+        : Colors.black.withOpacity(0.10);
+    final resetBtnBg =
+        isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.08);
+    final resetBtnFg = isDark ? Colors.white : Colors.black87;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A),
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        title: const Text('Mindful Grounding'),
+        title: Text(
+          AppStrings.get('mindful_grounding', widget.lang),
+          style: TextStyle(color: titleColor),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.white,
+        iconTheme: IconThemeData(color: titleColor),
       ),
       body: Column(
         children: [
@@ -167,53 +188,57 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
               margin: const EdgeInsets.fromLTRB(24, 8, 24, 0),
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.07),
+                color: cardBg,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.1)),
+                border: Border.all(color: cardBorder),
+                boxShadow: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.07),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
               ),
               child: _finished
-                  ? const Column(
+                  ? Column(
                       children: [
-                        Text('🌿', style: TextStyle(fontSize: 32)),
-                        SizedBox(height: 8),
+                        const Text('🌿', style: TextStyle(fontSize: 32)),
+                        const SizedBox(height: 8),
                         Text(
-                          'Well done!',
+                          AppStrings.get('well_done', widget.lang),
                           style: TextStyle(
-                            color: Colors.white,
+                            color: titleColor,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        SizedBox(height: 4),
+                        const SizedBox(height: 4),
                         Text(
-                          'You\'ve completed the grounding exercise.\nTake a moment to notice how you feel.',
+                          AppStrings.get('grounding_complete', widget.lang),
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 13,
-                          ),
+                          style: TextStyle(color: subtitleColor, fontSize: 13),
                         ),
                       ],
                     )
                   : !_started
-                      ? const Column(
+                      ? Column(
                           children: [
                             Text(
-                              '5-4-3-2-1 Grounding',
+                              '5-4-3-2-1 ${AppStrings.get('mindful_grounding', widget.lang)}',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: titleColor,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            SizedBox(height: 6),
+                            const SizedBox(height: 6),
                             Text(
-                              'Each time you find something, tap the circle.\nIt will count down for you.',
+                              AppStrings.get('mg_intro', widget.lang),
                               textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 13,
-                              ),
+                              style:
+                                  TextStyle(color: subtitleColor, fontSize: 13),
                             ),
                           ],
                         )
@@ -221,8 +246,8 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
                           children: [
                             Text(
                               '${step['emoji']}  ${step['sense']}',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: titleColor,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -231,10 +256,8 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
                             Text(
                               step['prompt'] as String,
                               textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 13,
-                              ),
+                              style:
+                                  TextStyle(color: subtitleColor, fontSize: 13),
                             ),
                           ],
                         ),
@@ -279,7 +302,9 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
                           child: CircularProgressIndicator(
                             value: _finished ? 1.0 : progress,
                             strokeWidth: 5,
-                            backgroundColor: Colors.white.withOpacity(0.1),
+                            backgroundColor: isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.black.withOpacity(0.08),
                             valueColor: AlwaysStoppedAnimation<Color>(
                               _finished ? const Color(0xFF6FFFD4) : color,
                             ),
@@ -309,22 +334,22 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
                                 color: (_finished
                                         ? const Color(0xFF6FFFD4)
                                         : color)
-                                    .withOpacity(0.35),
+                                    .withOpacity(isDark ? 0.35 : 0.25),
                                 blurRadius: 30,
                                 spreadRadius: 4,
                               ),
                             ],
                           ),
                           child: _finished
-                              ? const Column(
+                              ? Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text('✓',
+                                    const Text('✓',
                                         style: TextStyle(
                                             fontSize: 52, color: Colors.white)),
                                     Text(
-                                      'Done!',
-                                      style: TextStyle(
+                                      AppStrings.get('done', widget.lang),
+                                      style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 20,
                                         fontWeight: FontWeight.bold,
@@ -333,19 +358,20 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
                                   ],
                                 )
                               : !_started
-                                  ? const Column(
+                                  ? Column(
                                       mainAxisAlignment:
                                           MainAxisAlignment.center,
                                       children: [
-                                        Text('5',
+                                        const Text('5',
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontSize: 64,
                                               fontWeight: FontWeight.w200,
                                             )),
                                         Text(
-                                          'Tap to Start',
-                                          style: TextStyle(
+                                          AppStrings.get(
+                                              'tap_to_start', widget.lang),
+                                          style: const TextStyle(
                                             color: Colors.white70,
                                             fontSize: 14,
                                           ),
@@ -370,10 +396,10 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
                                           ),
                                         ),
                                         Text(
-                                          'tap each one',
-                                          style: TextStyle(
-                                            color:
-                                                Colors.white.withOpacity(0.7),
+                                          AppStrings.get(
+                                              'tap_each_one', widget.lang),
+                                          style: const TextStyle(
+                                            color: Colors.white70,
                                             fontSize: 13,
                                           ),
                                         ),
@@ -396,11 +422,11 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
               padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_steps.length, (i) {
+                children: List.generate(steps.length, (i) {
                   final isDone =
                       i < _currentStep || (_finished && i == _currentStep);
                   final isCurrent = i == _currentStep && !_finished;
-                  final stepColor = _steps[i]['color'] as Color;
+                  final stepColor = steps[i]['color'] as Color;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -411,7 +437,7 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
                           ? stepColor.withOpacity(0.5)
                           : isCurrent
                               ? stepColor
-                              : Colors.white.withOpacity(0.15),
+                              : dotInactive,
                       borderRadius: BorderRadius.circular(5),
                     ),
                   );
@@ -427,9 +453,9 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _started
-                      ? Colors.white.withOpacity(0.1)
+                      ? resetBtnBg
                       : const Color(0xFF6FFFD4).withOpacity(0.85),
-                  foregroundColor: Colors.white,
+                  foregroundColor: _started ? resetBtnFg : Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -439,10 +465,10 @@ class _MindfulGroundingScreenState extends State<MindfulGroundingScreen>
                 onPressed: _started ? _reset : _start,
                 child: Text(
                   _finished
-                      ? 'Start Again'
+                      ? AppStrings.get('start_again', widget.lang)
                       : _started
-                          ? 'Reset'
-                          : 'Start Grounding',
+                          ? AppStrings.get('reset', widget.lang)
+                          : AppStrings.get('start_grounding', widget.lang),
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.w600),
                 ),

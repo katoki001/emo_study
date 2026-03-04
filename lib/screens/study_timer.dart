@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/settings_provider.dart';
+import '../l10n/app_strings.dart';
 
 class StudyTimerScreen extends StatefulWidget {
   const StudyTimerScreen({super.key});
@@ -9,13 +12,11 @@ class StudyTimerScreen extends StatefulWidget {
 }
 
 class _StudyTimerScreenState extends State<StudyTimerScreen> {
-  // TIMER STATE
   bool _isRunning = false;
-  bool _startLocked = false; // <--- REQUIRED FIX
+  bool _startLocked = false;
   Duration _timeLeft = const Duration(minutes: 25);
   Timer? _timer;
 
-  // SETTINGS
   Duration _studyTime = const Duration(minutes: 25);
   Duration _breakTime = const Duration(minutes: 5);
   bool _isStudyTime = true;
@@ -29,24 +30,39 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final lang = settings.language;
+    final isDark = settings.isDark;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
           const SizedBox(height: 20),
-          // TIMER CIRCLE
+
+          // Timer circle
           Container(
             width: 240,
             height: 250,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: _isStudyTime ? Colors.deepPurple : Colors.green,
+              boxShadow: [
+                BoxShadow(
+                  color: (_isStudyTime ? Colors.deepPurple : Colors.green)
+                      .withOpacity(0.3),
+                  blurRadius: 24,
+                  spreadRadius: 4,
+                ),
+              ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  _isStudyTime ? 'STUDY' : 'BREAK',
+                  _isStudyTime
+                      ? AppStrings.get('study', lang)
+                      : AppStrings.get('break', lang),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -64,11 +80,10 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _isRunning ? 'Keep going!' : 'Ready to start',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                  ),
+                  _isRunning
+                      ? AppStrings.get('keep_going', lang)
+                      : AppStrings.get('ready_to_start', lang),
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
               ],
             ),
@@ -76,38 +91,41 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
 
           const SizedBox(height: 32),
 
-          // BUTTONS
+          // Buttons
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (!_isRunning)
                 _buildButton(
                   icon: Icons.play_arrow,
-                  label: 'Start',
+                  label: AppStrings.get('start', lang),
                   color: Colors.green,
                   onPressed: _startTimer,
+                  isDark: isDark,
                 ),
               const SizedBox(width: 24),
               if (_isRunning)
                 _buildButton(
                   icon: Icons.pause,
-                  label: 'Pause',
+                  label: AppStrings.get('pause', lang),
                   color: Colors.orange,
                   onPressed: _pauseTimer,
+                  isDark: isDark,
                 ),
               const SizedBox(width: 24),
               _buildButton(
                 icon: Icons.stop,
-                label: 'Stop',
+                label: AppStrings.get('stop', lang),
                 color: Colors.red,
                 onPressed: _stopTimer,
+                isDark: isDark,
               ),
             ],
           ),
 
           const SizedBox(height: 24),
 
-          // SESSION COUNTER
+          // Session counter
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
@@ -115,7 +133,7 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              'Sessions: $_sessionsDone',
+              '${AppStrings.get('sessions', lang)}: $_sessionsDone',
               style: const TextStyle(
                 color: Colors.deepPurple,
                 fontSize: 16,
@@ -126,33 +144,49 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
 
           const SizedBox(height: 24),
 
-          // TIME SETTINGS
+          // Time settings
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF1E2A3A) : Colors.white,
               borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: Column(
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Study:', style: TextStyle(fontSize: 16)),
+                    Text(
+                      AppStrings.get('study_label', lang),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
                     const SizedBox(width: 10),
                     IconButton(
-                      icon: const Icon(Icons.remove),
+                      icon: Icon(Icons.remove,
+                          color: isDark ? Colors.white70 : Colors.black87),
                       onPressed: () => _changeTime(true, -5),
                     ),
                     Text(
                       '${_studyTime.inMinutes} min',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add),
+                      icon: Icon(Icons.add,
+                          color: isDark ? Colors.white70 : Colors.black87),
                       onPressed: () => _changeTime(true, 5),
                     ),
                   ],
@@ -161,21 +195,30 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Break:', style: TextStyle(fontSize: 16)),
+                    Text(
+                      AppStrings.get('break_label', lang),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
                     const SizedBox(width: 10),
                     IconButton(
-                      icon: const Icon(Icons.remove),
+                      icon: Icon(Icons.remove,
+                          color: isDark ? Colors.white70 : Colors.black87),
                       onPressed: () => _changeTime(false, -5),
                     ),
                     Text(
                       '${_breakTime.inMinutes} min',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add),
+                      icon: Icon(Icons.add,
+                          color: isDark ? Colors.white70 : Colors.black87),
                       onPressed: () => _changeTime(false, 5),
                     ),
                   ],
@@ -188,12 +231,12 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
     );
   }
 
-  // REUSABLE BUTTON WIDGET
   Widget _buildButton({
     required IconData icon,
     required String label,
     required Color color,
     required VoidCallback onPressed,
+    required bool isDark,
   }) {
     return Column(
       children: [
@@ -205,35 +248,27 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
         const SizedBox(height: 6),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: Colors.grey,
+            color: isDark ? Colors.white54 : Colors.grey,
           ),
         ),
       ],
     );
   }
 
-  // START TIMER — FIXED VERSION
   void _startTimer() {
     if (_startLocked) return;
     _startLocked = true;
-
     if (_isRunning) {
       _startLocked = false;
       return;
     }
-
     _timer?.cancel();
-
-    setState(() {
-      _isRunning = true;
-    });
-
+    setState(() => _isRunning = true);
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) return;
-
       setState(() {
         if (_timeLeft.inSeconds > 0) {
           _timeLeft -= const Duration(seconds: 1);
@@ -244,17 +279,13 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
         }
       });
     });
-
-    Future.delayed(const Duration(milliseconds: 80), () {
-      _startLocked = false;
-    });
+    Future.delayed(
+        const Duration(milliseconds: 80), () => _startLocked = false);
   }
 
   void _pauseTimer() {
     _timer?.cancel();
-    setState(() {
-      _isRunning = false;
-    });
+    setState(() => _isRunning = false);
   }
 
   void _stopTimer() {
@@ -281,7 +312,6 @@ class _StudyTimerScreenState extends State<StudyTimerScreen> {
 
   void _changeTime(bool isStudy, int minutes) {
     if (_isRunning) return;
-
     setState(() {
       if (isStudy) {
         int newMin = _studyTime.inMinutes + minutes;

@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/settings_provider.dart';
+import '../l10n/app_strings.dart';
 
 class SubjectCard extends StatelessWidget {
   final String subject;
@@ -9,7 +12,7 @@ class SubjectCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onUploadLecture;
   final VoidCallback? onAiHelper;
-  final VoidCallback? onSchedule;
+  final VoidCallback? onFlashcards;
 
   const SubjectCard({
     super.key,
@@ -21,16 +24,20 @@ class SubjectCard extends StatelessWidget {
     required this.onTap,
     this.onUploadLecture,
     this.onAiHelper,
-    this.onSchedule,
+    this.onFlashcards,
   });
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final lang = settings.language;
+    final isDark = settings.isDark;
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isSmallScreen = screenWidth < 380;
 
     return Card(
       elevation: 3,
+      color: isDark ? const Color(0xFF1E2A3A) : null,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: onTap,
@@ -43,16 +50,18 @@ class SubjectCard extends StatelessWidget {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                color.withOpacity(0.1),
-                color.withOpacity(0.05),
+                color.withOpacity(isDark ? 0.15 : 0.1),
+                color.withOpacity(isDark ? 0.08 : 0.05),
               ],
             ),
-            border: Border.all(color: color.withOpacity(0.1), width: 1),
+            border: Border.all(
+              color: color.withOpacity(isDark ? 0.2 : 0.1),
+              width: 1,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: Icon and Progress %
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -68,51 +77,52 @@ class SubjectCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              // Subject Title
               Text(
                 subject,
                 style: TextStyle(
                   fontSize: isSmallScreen ? 14 : 16,
                   fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 4),
-              // Description
               Expanded(
                 child: Text(
                   description,
                   style: TextStyle(
                     fontSize: isSmallScreen ? 10 : 12,
-                    color: Colors.grey[600],
+                    color: isDark ? Colors.white54 : Colors.grey[600],
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
               const SizedBox(height: 10),
-              // Action Buttons Row
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _ActionButton(
                     icon: Icons.upload_file_rounded,
-                    label: 'Lecture',
+                    label: AppStrings.get('lecture', lang),
                     color: color,
+                    isDark: isDark,
                     onTap: onUploadLecture,
                   ),
                   _ActionButton(
                     icon: Icons.auto_awesome_rounded,
-                    label: 'AI Help',
+                    label: AppStrings.get('ai_help', lang),
                     color: color,
+                    isDark: isDark,
                     onTap: onAiHelper,
                   ),
                   _ActionButton(
-                    icon: Icons.calendar_month_rounded,
-                    label: 'Schedule',
+                    icon: Icons.style_rounded,
+                    label: AppStrings.get('cards', lang),
                     color: color,
-                    onTap: onSchedule,
+                    isDark: isDark,
+                    onTap: onFlashcards,
                   ),
                 ],
               ),
@@ -122,25 +132,20 @@ class SubjectCard extends StatelessWidget {
       ),
     );
   }
-
-  Color _getProgressColor(double progress) {
-    if (progress >= 0.8) return Colors.green;
-    if (progress >= 0.5) return Colors.blue;
-    return Colors.orange;
-  }
 }
 
-/// A compact icon+label button used in the action row.
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final bool isDark;
   final VoidCallback? onTap;
 
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.color,
+    required this.isDark,
     this.onTap,
   });
 
@@ -150,7 +155,7 @@ class _ActionButton extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 2),
         child: Material(
-          color: color.withOpacity(0.08),
+          color: color.withOpacity(isDark ? 0.15 : 0.08),
           borderRadius: BorderRadius.circular(10),
           child: InkWell(
             onTap: onTap,
@@ -175,31 +180,6 @@ class _ActionButton extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _Badge extends StatelessWidget {
-  final String text;
-  final Color color;
-  const _Badge({required this.text, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
         ),
       ),
     );

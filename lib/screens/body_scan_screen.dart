@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import '../l10n/app_strings.dart';
 
 class BodyScanScreen extends StatefulWidget {
-  const BodyScanScreen({super.key});
+  final String lang;
+  final bool isDark;
+  const BodyScanScreen({super.key, this.lang = 'en', this.isDark = true});
 
   @override
   State<BodyScanScreen> createState() => _BodyScanScreenState();
@@ -18,56 +21,56 @@ class _BodyScanScreenState extends State<BodyScanScreen>
   int _currentStep = 0;
   int _countdown = 0;
 
-  final List<Map<String, dynamic>> _steps = [
-    {
-      'label': 'Close your eyes',
-      'instruction': 'Breathe naturally and settle in',
-      'part': BodyPart.none,
-      'duration': 5,
-    },
-    {
-      'label': 'Top of Head',
-      'instruction': 'Feel the top of your head, release any tension',
-      'part': BodyPart.head,
-      'duration': 8,
-    },
-    {
-      'label': 'Face & Neck',
-      'instruction': 'Relax your jaw, eyes, forehead and neck',
-      'part': BodyPart.face,
-      'duration': 8,
-    },
-    {
-      'label': 'Shoulders & Arms',
-      'instruction': 'Let your shoulders drop, relax down to your fingertips',
-      'part': BodyPart.shoulders,
-      'duration': 10,
-    },
-    {
-      'label': 'Chest & Stomach',
-      'instruction': 'Feel your breath in your chest and belly',
-      'part': BodyPart.chest,
-      'duration': 10,
-    },
-    {
-      'label': 'Hips & Lower Back',
-      'instruction': 'Release tension in your hips and lower back',
-      'part': BodyPart.hips,
-      'duration': 10,
-    },
-    {
-      'label': 'Legs & Feet',
-      'instruction': 'Relax your thighs, calves, and feel your feet',
-      'part': BodyPart.legs,
-      'duration': 12,
-    },
-    {
-      'label': 'Whole Body',
-      'instruction': 'Your entire body is relaxed and at peace',
-      'part': BodyPart.all,
-      'duration': 8,
-    },
-  ];
+  List<Map<String, dynamic>> get _steps => [
+        {
+          'label': AppStrings.get('bs_close_eyes', widget.lang),
+          'instruction': AppStrings.get('bs_close_eyes_inst', widget.lang),
+          'part': BodyPart.none,
+          'duration': 5,
+        },
+        {
+          'label': AppStrings.get('bs_head', widget.lang),
+          'instruction': AppStrings.get('bs_head_inst', widget.lang),
+          'part': BodyPart.head,
+          'duration': 8,
+        },
+        {
+          'label': AppStrings.get('bs_face', widget.lang),
+          'instruction': AppStrings.get('bs_face_inst', widget.lang),
+          'part': BodyPart.face,
+          'duration': 8,
+        },
+        {
+          'label': AppStrings.get('bs_shoulders', widget.lang),
+          'instruction': AppStrings.get('bs_shoulders_inst', widget.lang),
+          'part': BodyPart.shoulders,
+          'duration': 10,
+        },
+        {
+          'label': AppStrings.get('bs_chest', widget.lang),
+          'instruction': AppStrings.get('bs_chest_inst', widget.lang),
+          'part': BodyPart.chest,
+          'duration': 10,
+        },
+        {
+          'label': AppStrings.get('bs_hips', widget.lang),
+          'instruction': AppStrings.get('bs_hips_inst', widget.lang),
+          'part': BodyPart.hips,
+          'duration': 10,
+        },
+        {
+          'label': AppStrings.get('bs_legs', widget.lang),
+          'instruction': AppStrings.get('bs_legs_inst', widget.lang),
+          'part': BodyPart.legs,
+          'duration': 12,
+        },
+        {
+          'label': AppStrings.get('bs_whole', widget.lang),
+          'instruction': AppStrings.get('bs_whole_inst', widget.lang),
+          'part': BodyPart.all,
+          'duration': 8,
+        },
+      ];
 
   @override
   void initState() {
@@ -106,15 +109,16 @@ class _BodyScanScreenState extends State<BodyScanScreen>
 
   void _runStep(int stepIndex) async {
     if (!mounted || !_isRunning) return;
-    if (stepIndex >= _steps.length) {
+    final steps = _steps;
+    if (stepIndex >= steps.length) {
       setState(() {
         _isRunning = false;
-        _currentStep = _steps.length - 1;
+        _currentStep = steps.length - 1;
       });
       return;
     }
 
-    final step = _steps[stepIndex];
+    final step = steps[stepIndex];
     final duration = step['duration'] as int;
 
     setState(() {
@@ -141,16 +145,36 @@ class _BodyScanScreenState extends State<BodyScanScreen>
 
   @override
   Widget build(BuildContext context) {
-    final step = _steps[_isRunning ? _currentStep : 0];
+    final isDark = widget.isDark;
+    final steps = _steps;
+    final step = steps[_isRunning ? _currentStep : 0];
     final activePart = _isRunning ? step['part'] as BodyPart : BodyPart.none;
 
+    // Theme-aware colors
+    final scaffoldBg =
+        isDark ? const Color(0xFF0D1B2A) : const Color(0xFFF0F6FF);
+    final cardBg = isDark ? Colors.white.withOpacity(0.07) : Colors.white;
+    final cardBorder =
+        isDark ? Colors.white.withOpacity(0.1) : Colors.blue.withOpacity(0.15);
+    final titleColor = isDark ? Colors.white : const Color(0xFF0D1B2A);
+    final subtitleColor =
+        isDark ? Colors.white.withOpacity(0.7) : Colors.black54;
+    final accentColor = const Color(0xFF6FBBFF);
+    final dotInactive =
+        isDark ? Colors.white.withOpacity(0.2) : Colors.black.withOpacity(0.12);
+    final stopBtnBg =
+        isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.08);
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A),
+      backgroundColor: scaffoldBg,
       appBar: AppBar(
-        title: const Text('Body Scan'),
+        title: Text(
+          AppStrings.get('body_scan', widget.lang),
+          style: TextStyle(color: titleColor),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.white,
+        iconTheme: IconThemeData(color: titleColor),
       ),
       body: Column(
         children: [
@@ -162,20 +186,27 @@ class _BodyScanScreenState extends State<BodyScanScreen>
               margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.07),
+                color: cardBg,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.1),
-                ),
+                border: Border.all(color: cardBorder),
+                boxShadow: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.blue.withOpacity(0.07),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        )
+                      ],
               ),
               child: Column(
                 children: [
                   Text(
                     _isRunning
                         ? step['label'] as String
-                        : 'Body Scan Meditation',
-                    style: const TextStyle(
-                      color: Colors.white,
+                        : AppStrings.get('body_scan', widget.lang),
+                    style: TextStyle(
+                      color: titleColor,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -184,10 +215,10 @@ class _BodyScanScreenState extends State<BodyScanScreen>
                   Text(
                     _isRunning
                         ? step['instruction'] as String
-                        : 'Progressive relaxation from head to toe.\nTap Start to begin.',
+                        : AppStrings.get('bs_intro', widget.lang),
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: subtitleColor,
                       fontSize: 13,
                     ),
                   ),
@@ -195,8 +226,8 @@ class _BodyScanScreenState extends State<BodyScanScreen>
                     const SizedBox(height: 10),
                     Text(
                       '$_countdown s',
-                      style: const TextStyle(
-                        color: Color(0xFF6FBBFF),
+                      style: TextStyle(
+                        color: accentColor,
                         fontSize: 22,
                         fontWeight: FontWeight.w300,
                       ),
@@ -218,6 +249,7 @@ class _BodyScanScreenState extends State<BodyScanScreen>
                     painter: BodyPainter(
                       activePart: activePart,
                       glowIntensity: _glowAnimation.value,
+                      isDark: isDark,
                     ),
                   );
                 },
@@ -231,7 +263,7 @@ class _BodyScanScreenState extends State<BodyScanScreen>
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_steps.length, (i) {
+                children: List.generate(steps.length, (i) {
                   final isDone = i < _currentStep;
                   final isCurrent = i == _currentStep;
                   return AnimatedContainer(
@@ -241,10 +273,10 @@ class _BodyScanScreenState extends State<BodyScanScreen>
                     height: 8,
                     decoration: BoxDecoration(
                       color: isDone
-                          ? const Color(0xFF6FBBFF).withOpacity(0.5)
+                          ? accentColor.withOpacity(0.5)
                           : isCurrent
-                              ? const Color(0xFF6FBBFF)
-                              : Colors.white.withOpacity(0.2),
+                              ? accentColor
+                              : dotInactive,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   );
@@ -261,10 +293,10 @@ class _BodyScanScreenState extends State<BodyScanScreen>
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _isRunning
-                      ? Colors.white.withOpacity(0.1)
-                      : const Color(0xFF6FBBFF),
-                  foregroundColor: Colors.white,
+                  backgroundColor: _isRunning ? stopBtnBg : accentColor,
+                  foregroundColor: _isRunning
+                      ? (isDark ? Colors.white : Colors.black87)
+                      : Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -273,7 +305,9 @@ class _BodyScanScreenState extends State<BodyScanScreen>
                 ),
                 onPressed: _isRunning ? _stop : _start,
                 child: Text(
-                  _isRunning ? 'Stop' : 'Start Body Scan',
+                  _isRunning
+                      ? AppStrings.get('stop', widget.lang)
+                      : AppStrings.get('start_body_scan', widget.lang),
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.w600),
                 ),
@@ -299,24 +333,30 @@ enum BodyPart { none, head, face, shoulders, chest, hips, legs, all }
 class BodyPainter extends CustomPainter {
   final BodyPart activePart;
   final double glowIntensity;
+  final bool isDark;
 
-  BodyPainter({required this.activePart, required this.glowIntensity});
+  BodyPainter({
+    required this.activePart,
+    required this.glowIntensity,
+    this.isDark = true,
+  });
 
-  static const Color baseColor = Color(0xFF2A3F5F);
-  static const Color glowColor = Color(0xFF6FBBFF);
-  static const Color outlineColor = Color(0xFF4A6FA5);
+  Color get baseColor =>
+      isDark ? const Color(0xFF2A3F5F) : const Color(0xFFD0E4F7);
+  Color get glowColor => const Color(0xFF6FBBFF);
+  Color get outlineColor =>
+      isDark ? const Color(0xFF4A6FA5) : const Color(0xFF7AABDC);
 
   @override
   void paint(Canvas canvas, Size size) {
     final cx = size.width / 2;
 
-    // Helper to get glow paint
     Paint glowPaint(BodyPart part) {
       final isActive = activePart == part || activePart == BodyPart.all;
       return Paint()
         ..color = isActive
             ? glowColor.withOpacity(0.3 + (0.4 * glowIntensity))
-            : baseColor.withOpacity(0.8)
+            : baseColor.withOpacity(isDark ? 0.8 : 1.0)
         ..style = PaintingStyle.fill;
     }
 
@@ -325,7 +365,7 @@ class BodyPainter extends CustomPainter {
       return Paint()
         ..color = isActive
             ? glowColor.withOpacity(0.8 + (0.2 * glowIntensity))
-            : outlineColor.withOpacity(0.6)
+            : outlineColor.withOpacity(isDark ? 0.6 : 0.8)
         ..style = PaintingStyle.stroke
         ..strokeWidth = isActive ? 2.0 : 1.0;
     }
@@ -368,59 +408,32 @@ class BodyPainter extends CustomPainter {
     canvas.drawPath(neckPath, outlinePaint(neckPart));
 
     // ── SHOULDERS & ARMS ──
-    // Left arm
     final leftArm = Path()
       ..moveTo(cx - 26, size.height * 0.20)
       ..quadraticBezierTo(
-        cx - 58,
-        size.height * 0.28,
-        cx - 54,
-        size.height * 0.46,
-      )
+          cx - 58, size.height * 0.28, cx - 54, size.height * 0.46)
       ..quadraticBezierTo(
-        cx - 52,
-        size.height * 0.50,
-        cx - 44,
-        size.height * 0.46,
-      )
+          cx - 52, size.height * 0.50, cx - 44, size.height * 0.46)
       ..quadraticBezierTo(
-        cx - 44,
-        size.height * 0.30,
-        cx - 18,
-        size.height * 0.22,
-      )
+          cx - 44, size.height * 0.30, cx - 18, size.height * 0.22)
       ..close();
     drawGlowShadow(canvas, leftArm, BodyPart.shoulders);
     canvas.drawPath(leftArm, glowPaint(BodyPart.shoulders));
     canvas.drawPath(leftArm, outlinePaint(BodyPart.shoulders));
 
-    // Right arm
     final rightArm = Path()
       ..moveTo(cx + 26, size.height * 0.20)
       ..quadraticBezierTo(
-        cx + 58,
-        size.height * 0.28,
-        cx + 54,
-        size.height * 0.46,
-      )
+          cx + 58, size.height * 0.28, cx + 54, size.height * 0.46)
       ..quadraticBezierTo(
-        cx + 52,
-        size.height * 0.50,
-        cx + 44,
-        size.height * 0.46,
-      )
+          cx + 52, size.height * 0.50, cx + 44, size.height * 0.46)
       ..quadraticBezierTo(
-        cx + 44,
-        size.height * 0.30,
-        cx + 18,
-        size.height * 0.22,
-      )
+          cx + 44, size.height * 0.30, cx + 18, size.height * 0.22)
       ..close();
     drawGlowShadow(canvas, rightArm, BodyPart.shoulders);
     canvas.drawPath(rightArm, glowPaint(BodyPart.shoulders));
     canvas.drawPath(rightArm, outlinePaint(BodyPart.shoulders));
 
-    // Left hand
     final leftHand = Path()
       ..addOval(Rect.fromCenter(
         center: Offset(cx - 49, size.height * 0.505),
@@ -431,7 +444,6 @@ class BodyPainter extends CustomPainter {
     canvas.drawPath(leftHand, glowPaint(BodyPart.shoulders));
     canvas.drawPath(leftHand, outlinePaint(BodyPart.shoulders));
 
-    // Right hand
     final rightHand = Path()
       ..addOval(Rect.fromCenter(
         center: Offset(cx + 49, size.height * 0.505),
@@ -442,7 +454,7 @@ class BodyPainter extends CustomPainter {
     canvas.drawPath(rightHand, glowPaint(BodyPart.shoulders));
     canvas.drawPath(rightHand, outlinePaint(BodyPart.shoulders));
 
-    // ── TORSO (chest) ──
+    // ── TORSO ──
     final torsoPath = Path()
       ..moveTo(cx - 26, size.height * 0.19)
       ..lineTo(cx - 30, size.height * 0.38)
@@ -470,7 +482,6 @@ class BodyPainter extends CustomPainter {
     canvas.drawPath(hipsPath, outlinePaint(BodyPart.hips));
 
     // ── LEGS ──
-    // Left leg
     final leftLeg = Path()
       ..moveTo(cx - 14, size.height * 0.555)
       ..lineTo(cx - 20, size.height * 0.76)
@@ -482,7 +493,6 @@ class BodyPainter extends CustomPainter {
     canvas.drawPath(leftLeg, glowPaint(BodyPart.legs));
     canvas.drawPath(leftLeg, outlinePaint(BodyPart.legs));
 
-    // Right leg
     final rightLeg = Path()
       ..moveTo(cx + 14, size.height * 0.555)
       ..lineTo(cx + 20, size.height * 0.76)
@@ -494,37 +504,27 @@ class BodyPainter extends CustomPainter {
     canvas.drawPath(rightLeg, glowPaint(BodyPart.legs));
     canvas.drawPath(rightLeg, outlinePaint(BodyPart.legs));
 
-    // Left foot
     final leftFoot = Path()
       ..moveTo(cx - 20, size.height * 0.845)
       ..quadraticBezierTo(
-        cx - 22,
-        size.height * 0.88,
-        cx - 8,
-        size.height * 0.88,
-      )
+          cx - 22, size.height * 0.88, cx - 8, size.height * 0.88)
       ..lineTo(cx - 6, size.height * 0.855)
       ..close();
     drawGlowShadow(canvas, leftFoot, BodyPart.legs);
     canvas.drawPath(leftFoot, glowPaint(BodyPart.legs));
     canvas.drawPath(leftFoot, outlinePaint(BodyPart.legs));
 
-    // Right foot
     final rightFoot = Path()
       ..moveTo(cx + 20, size.height * 0.845)
       ..quadraticBezierTo(
-        cx + 22,
-        size.height * 0.88,
-        cx + 8,
-        size.height * 0.88,
-      )
+          cx + 22, size.height * 0.88, cx + 8, size.height * 0.88)
       ..lineTo(cx + 6, size.height * 0.855)
       ..close();
     drawGlowShadow(canvas, rightFoot, BodyPart.legs);
     canvas.drawPath(rightFoot, glowPaint(BodyPart.legs));
     canvas.drawPath(rightFoot, outlinePaint(BodyPart.legs));
 
-    // ── FACE DETAILS (eyes + mouth, shown when face is active) ──
+    // ── FACE DETAILS ──
     if (activePart == BodyPart.face || activePart == BodyPart.all) {
       final eyePaint = Paint()
         ..color = glowColor.withOpacity(0.9)
@@ -554,6 +554,7 @@ class BodyPainter extends CustomPainter {
   @override
   bool shouldRepaint(BodyPainter oldDelegate) {
     return oldDelegate.activePart != activePart ||
-        oldDelegate.glowIntensity != glowIntensity;
+        oldDelegate.glowIntensity != glowIntensity ||
+        oldDelegate.isDark != isDark;
   }
 }

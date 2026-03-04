@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -21,9 +22,9 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _taglineOpacity;
   late final Animation<Offset> _taglineSlide;
 
-  static const Color _bg = Color(0xFF1C2E4A); // dark navy
-  static const Color _surface = Color(0xFF243656); // card surface
-  static const Color _primary = Color(0xFF4A90D9); // medium blue accent
+  static const Color _bg = Color(0xFF1C2E4A);
+  static const Color _surface = Color(0xFF243656);
+  static const Color _primary = Color(0xFF4A90D9);
   static const Color _textLight = Color(0xFFE8F0FE);
   static const Color _textSoft = Color(0xFF90AAC8);
 
@@ -83,9 +84,18 @@ class _SplashScreenState extends State<SplashScreen>
       if (mounted) _taglineController.forward();
     });
 
-    Future.delayed(const Duration(milliseconds: 3000), () {
-      if (mounted) Navigator.of(context).pushReplacementNamed('/');
-    });
+    // Check auth after animations settle
+    Future.delayed(const Duration(milliseconds: 2200), _checkAuthAndNavigate);
+  }
+
+  void _checkAuthAndNavigate() {
+    if (!mounted) return;
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      Navigator.of(context).pushReplacementNamed('/');
+    } else {
+      Navigator.of(context).pushReplacementNamed('/sign-in');
+    }
   }
 
   @override
@@ -125,46 +135,25 @@ class _SplashScreenState extends State<SplashScreen>
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   const Spacer(flex: 3),
-
-                  // Logo
                   FadeTransition(
                     opacity: _logoOpacity,
-                    child: ScaleTransition(
-                      scale: _logoScale,
-                      child: _buildLogo(),
-                    ),
+                    child:
+                        ScaleTransition(scale: _logoScale, child: _buildLogo()),
                   ),
-
                   const SizedBox(height: 28),
-
-                  // App name
                   FadeTransition(
                     opacity: _textOpacity,
                     child: SlideTransition(
-                      position: _textSlide,
-                      child: _buildWordmark(),
-                    ),
+                        position: _textSlide, child: _buildWordmark()),
                   ),
-
                   const SizedBox(height: 10),
-
-                  // Tagline
                   FadeTransition(
                     opacity: _taglineOpacity,
                     child: SlideTransition(
-                      position: _taglineSlide,
-                      child: _buildTagline(),
-                    ),
+                        position: _taglineSlide, child: _buildTagline()),
                   ),
-
                   const Spacer(flex: 3),
-
-                  // Dots
-                  FadeTransition(
-                    opacity: _taglineOpacity,
-                    child: _buildDots(),
-                  ),
-
+                  FadeTransition(opacity: _taglineOpacity, child: _buildDots()),
                   const SizedBox(height: 48),
                 ],
               ),
@@ -185,15 +174,12 @@ class _SplashScreenState extends State<SplashScreen>
         border: Border.all(color: _primary.withOpacity(0.3), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: _primary.withOpacity(0.18),
-            blurRadius: 28,
-            offset: const Offset(0, 8),
-          ),
+              color: _primary.withOpacity(0.18),
+              blurRadius: 28,
+              offset: const Offset(0, 8)),
         ],
       ),
-      child: const Center(
-        child: Text('🌍', style: TextStyle(fontSize: 48)),
-      ),
+      child: const Center(child: Text('🌍', style: TextStyle(fontSize: 48))),
     );
   }
 
@@ -202,49 +188,42 @@ class _SplashScreenState extends State<SplashScreen>
       text: const TextSpan(
         children: [
           TextSpan(
-            text: 'World',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w800,
-              color: _textLight,
-              letterSpacing: -0.5,
-            ),
-          ),
+              text: 'World',
+              style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w800,
+                  color: _textLight,
+                  letterSpacing: -0.5)),
           TextSpan(
-            text: 'Classroom',
-            style: TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w300,
-              color: _primary,
-              letterSpacing: -0.5,
-            ),
-          ),
+              text: 'Classroom',
+              style: TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.w300,
+                  color: _primary,
+                  letterSpacing: -0.5)),
         ],
       ),
     );
   }
 
   Widget _buildTagline() {
-    return Text(
+    return const Text(
       'Learn at your own pace',
-      style: const TextStyle(
-        fontSize: 15,
-        color: _textSoft,
-        fontWeight: FontWeight.w400,
-        letterSpacing: 0.3,
-      ),
+      style: TextStyle(
+          fontSize: 15,
+          color: _textSoft,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0.3),
     );
   }
 
   Widget _buildDots() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(3, (i) {
-        return _AnimatedDot(
-          delay: Duration(milliseconds: i * 200),
-          color: _primary,
-        );
-      }),
+      children: List.generate(
+          3,
+          (i) => _AnimatedDot(
+              delay: Duration(milliseconds: i * 200), color: _primary)),
     );
   }
 }
@@ -267,9 +246,7 @@ class _AnimatedDotState extends State<_AnimatedDot>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+        vsync: this, duration: const Duration(milliseconds: 600));
     _anim = Tween<double>(begin: 0, end: -8).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
@@ -294,10 +271,8 @@ class _AnimatedDotState extends State<_AnimatedDot>
           margin: const EdgeInsets.symmetric(horizontal: 4),
           width: 7,
           height: 7,
-          decoration: BoxDecoration(
-            color: widget.color,
-            shape: BoxShape.circle,
-          ),
+          decoration:
+              BoxDecoration(color: widget.color, shape: BoxShape.circle),
         ),
       ),
     );

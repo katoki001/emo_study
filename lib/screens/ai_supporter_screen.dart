@@ -1,22 +1,16 @@
-// lib/screens/ai_supporter_screen.dart
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/settings_provider.dart';
+import '../l10n/app_strings.dart';
 import '../services/colab_ai_service.dart';
-
-// ─── Chat message model ────────────────────────────────────────────────────
 
 class ChatMessage {
   final String text;
   final bool isUser;
-  final MentalState? mentalState; // only on AI messages
-
-  const ChatMessage({
-    required this.text,
-    required this.isUser,
-    this.mentalState,
-  });
+  final MentalState? mentalState;
+  const ChatMessage(
+      {required this.text, required this.isUser, this.mentalState});
 }
-
-// ─── Mental state display config ──────────────────────────────────────────
 
 class _StateStyle {
   final Color color;
@@ -35,8 +29,6 @@ const Map<String, _StateStyle> _stateStyles = {
 _StateStyle _styleFor(String state) =>
     _stateStyles[state] ?? const _StateStyle(Color(0xFF78909C), Icons.circle);
 
-// ─── Screen ────────────────────────────────────────────────────────────────
-
 class AISupporterScreen extends StatefulWidget {
   const AISupporterScreen({super.key});
 
@@ -46,9 +38,9 @@ class AISupporterScreen extends StatefulWidget {
 
 class _AISupporterScreenState extends State<AISupporterScreen> {
   final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollCtrl = ScrollController();
   final List<ChatMessage> _messages = [];
-
+  final List<Map<String, String>> _history = [];
   bool _isTyping = false;
   bool _serverOnline = false;
   MentalState _latestState = MentalState.neutral();
@@ -59,27 +51,46 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
     _checkServer();
   }
 
-  // ── Server health ──────────────────────────────────────────────────────
+  @override
+  void dispose() {
+    _controller.dispose();
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _checkServer() async {
     final online = await ColabAIService.isReachable();
     if (mounted) setState(() => _serverOnline = online);
   }
 
-  // ── Send message ───────────────────────────────────────────────────────
+  Future<void> _resetConversation() async {
+    await ColabAIService.resetSession();
+    setState(() {
+      _messages.clear();
+      _history.clear();
+      _latestState = MentalState.neutral();
+    });
+  }
+
   Future<void> _sendMessage([String? override]) async {
     final text = (override ?? _controller.text).trim();
-    if (text.isEmpty) return;
-
+    if (text.isEmpty || _isTyping) return;
     setState(() {
       _messages.add(ChatMessage(text: text, isUser: true));
       _isTyping = true;
     });
+    _history.add({'role': 'user', 'content': text});
     _controller.clear();
     _scrollToBottom();
 
-    final result = await ColabAIService.sendMessage(text);
+    final result = await ColabAIService.sendMessage(
+      message: text,
+      history: List.from(_history),
+      language: context.read<SettingsProvider>().language,
+    );
 
     if (mounted) {
+      _history.add({'role': 'assistant', 'content': result.response});
       setState(() {
         _isTyping = false;
         _latestState = result.mentalState;
@@ -95,9 +106,9 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -105,23 +116,25 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
     });
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final isDark = settings.isDark;
+    final lang = settings.language;
+
     return Column(
       children: [
-        _buildHeader(),
-        if (!_serverOnline) _buildOfflineBanner(),
-        _buildQuickActions(),
-        Expanded(child: _buildMessageList()),
-        if (_isTyping) _buildTypingIndicator(),
-        _buildInputArea(),
+        _buildHeader(isDark, lang),
+        if (!_serverOnline) _buildOfflineBanner(isDark, lang),
+        _buildQuickActions(lang),
+        Expanded(child: _buildMessageList(isDark, lang)),
+        if (_isTyping) _buildTypingIndicator(isDark, lang),
+        _buildInputArea(isDark, lang),
       ],
     );
   }
 
-  // ── Header ─────────────────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark, String lang) {
     final dominant = _latestState.dominantState;
     final style = _styleFor(dominant);
 
@@ -129,9 +142,11 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
       duration: const Duration(milliseconds: 500),
       curve: Curves.easeInOut,
       margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: style.color.withOpacity(0.10),
+        color: isDark
+            ? style.color.withOpacity(0.15)
+            : style.color.withOpacity(0.10),
         border: Border.all(color: style.color.withOpacity(0.35), width: 1.5),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
@@ -143,30 +158,31 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
       ),
       child: Row(
         children: [
-          // Animated avatar
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 500),
-            child: CircleAvatar(
-              radius: 24,
-              backgroundColor: style.color.withOpacity(0.2),
-              child: Icon(style.icon, color: style.color, size: 26),
-            ),
+          CircleAvatar(
+            radius: 22,
+            backgroundColor: style.color.withOpacity(0.2),
+            child: Icon(style.icon, color: style.color, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Emotional AI Support',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Text(
+                  AppStrings.get('emotional_ai_support', lang),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                ),
                 const SizedBox(height: 2),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
                   child: Text(
                     dominant == 'Normal'
-                        ? 'Here to listen and support you'
-                        : 'Sensing some $dominant — I\'m here with you',
+                        ? AppStrings.get('here_to_listen', lang)
+                        : '${AppStrings.get('sensing', lang)} $dominant — ${AppStrings.get('here_with_you', lang)}',
                     key: ValueKey(dominant),
                     style: TextStyle(
                         fontSize: 12,
@@ -177,42 +193,40 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
               ],
             ),
           ),
-          // Connection status + refresh
+          IconButton(
+            icon: Icon(Icons.refresh,
+                size: 20, color: isDark ? Colors.white70 : Colors.grey[700]),
+            tooltip: AppStrings.get('new_conversation', lang),
+            onPressed: _resetConversation,
+          ),
           GestureDetector(
             onTap: _checkServer,
             child: Tooltip(
               message: _serverOnline
                   ? 'Colab connected ✓'
                   : 'Colab offline — tap to retry',
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 9,
-                    height: 9,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _serverOnline ? Colors.green : Colors.red,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.refresh, size: 18, color: Colors.grey[500]),
-                ],
+              child: Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: _serverOnline ? Colors.green : Colors.red,
+                ),
               ),
             ),
           ),
+          const SizedBox(width: 4),
         ],
       ),
     );
   }
 
-  // ── Offline banner ─────────────────────────────────────────────────────
-  Widget _buildOfflineBanner() {
+  Widget _buildOfflineBanner(bool isDark, String lang) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.orange[50],
+        color: isDark ? Colors.orange.withOpacity(0.15) : Colors.orange[50],
         border: Border.all(color: Colors.orange.shade300),
         borderRadius: BorderRadius.circular(12),
       ),
@@ -220,10 +234,10 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
         children: [
           const Icon(Icons.cloud_off, color: Colors.orange, size: 18),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Colab model is offline. Run the API cell in your notebook and update the URL in ColabAIService.',
-              style: TextStyle(fontSize: 12, color: Colors.deepOrange),
+              AppStrings.get('colab_offline', lang),
+              style: const TextStyle(fontSize: 12, color: Colors.deepOrange),
             ),
           ),
         ],
@@ -231,15 +245,13 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
     );
   }
 
-  // ── Quick actions ──────────────────────────────────────────────────────
-  Widget _buildQuickActions() {
-    const chips = [
-      ("I'm feeling anxious", Icons.air),
-      ("I feel really low", Icons.cloud),
-      ("I need someone to talk to", Icons.favorite),
-      ("I'm overwhelmed", Icons.waves),
+  Widget _buildQuickActions(String lang) {
+    final chips = [
+      (AppStrings.get('chip_anxious', lang), Icons.air),
+      (AppStrings.get('chip_low', lang), Icons.cloud),
+      (AppStrings.get('chip_not_here', lang), Icons.favorite_border),
+      (AppStrings.get('chip_overwhelmed', lang), Icons.waves),
     ];
-
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
@@ -258,47 +270,52 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
     );
   }
 
-  // ── Message list ───────────────────────────────────────────────────────
-  Widget _buildMessageList() {
+  Widget _buildMessageList(bool isDark, String lang) {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E2A3A) : Colors.white,
         borderRadius: BorderRadius.circular(20),
       ),
       child: _messages.isEmpty
-          ? _buildEmptyState()
+          ? _buildEmptyState(isDark, lang)
           : ListView.builder(
-              controller: _scrollController,
+              controller: _scrollCtrl,
               itemCount: _messages.length,
-              itemBuilder: (context, i) => _buildBubble(_messages[i]),
+              itemBuilder: (_, i) => _buildBubble(_messages[i], isDark),
             ),
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isDark, String lang) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.favorite_outline, size: 52, color: Colors.pink[200]),
           const SizedBox(height: 14),
-          const Text("I'm here for you.",
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87)),
+          Text(
+            AppStrings.get('here_for_you', lang),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
           const SizedBox(height: 6),
-          Text("How are you feeling today?",
-              style: TextStyle(fontSize: 14, color: Colors.grey[500])),
+          Text(
+            AppStrings.get('how_feeling_today', lang),
+            style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.white54 : Colors.grey[500]),
+          ),
         ],
       ),
     );
   }
 
-  // ── Single message bubble ──────────────────────────────────────────────
-  Widget _buildBubble(ChatMessage msg) {
+  Widget _buildBubble(ChatMessage msg, bool isDark) {
     return Column(
       crossAxisAlignment:
           msg.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
@@ -311,9 +328,13 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
             margin: const EdgeInsets.symmetric(vertical: 4),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
             decoration: BoxDecoration(
-              color: msg.isUser ? Colors.deepPurple[100] : Colors.grey[50],
-              border:
-                  msg.isUser ? null : Border.all(color: Colors.grey.shade200),
+              color: msg.isUser
+                  ? Colors.deepPurple[isDark ? 300 : 100]
+                  : (isDark ? const Color(0xFF263445) : Colors.grey[50]),
+              border: msg.isUser
+                  ? null
+                  : Border.all(
+                      color: isDark ? Colors.white12 : Colors.grey.shade200),
               borderRadius: BorderRadius.only(
                 topLeft: const Radius.circular(18),
                 topRight: const Radius.circular(18),
@@ -327,47 +348,52 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
                     offset: const Offset(0, 2))
               ],
             ),
-            child: Text(msg.text,
-                style: const TextStyle(fontSize: 14.5, height: 1.4)),
+            child: Text(
+              msg.text,
+              style: TextStyle(
+                fontSize: 14.5,
+                height: 1.4,
+                color: msg.isUser
+                    ? Colors.white
+                    : (isDark ? Colors.white : Colors.black87),
+              ),
+            ),
           ),
         ),
-        // Mental state bar — only on AI messages
         if (!msg.isUser && msg.mentalState != null)
-          _buildMentalStateBar(msg.mentalState!),
+          _buildMentalStateBar(msg.mentalState!, isDark),
       ],
     );
   }
 
-  // ── Mental state bar ───────────────────────────────────────────────────
-  Widget _buildMentalStateBar(MentalState state) {
-    final entries = state.toMap().entries.toList();
-
+  Widget _buildMentalStateBar(MentalState state, bool isDark) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10, top: 2),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border.all(color: Colors.grey.shade200),
+        color: isDark ? const Color(0xFF263445) : Colors.grey[50],
+        border:
+            Border.all(color: isDark ? Colors.white12 : Colors.grey.shade200),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.psychology_outlined,
-                  size: 13, color: Colors.grey[500]),
-              const SizedBox(width: 4),
-              Text('Mental State Estimation',
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey[600],
-                      letterSpacing: 0.3)),
-            ],
-          ),
+          Row(children: [
+            Icon(Icons.psychology_outlined,
+                size: 13, color: isDark ? Colors.white38 : Colors.grey[500]),
+            const SizedBox(width: 4),
+            Text(
+              'Mental State Estimation',
+              style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white54 : Colors.grey[600],
+                  letterSpacing: 0.3),
+            ),
+          ]),
           const SizedBox(height: 8),
-          ...entries.map((e) => _buildStateRow(e.key, e.value)),
+          ...state.toMap().entries.map((e) => _buildStateRow(e.key, e.value)),
         ],
       ),
     );
@@ -380,18 +406,16 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
       child: Row(
         children: [
           SizedBox(
-            width: 80,
-            child: Row(
-              children: [
-                Icon(style.icon, size: 12, color: style.color),
-                const SizedBox(width: 4),
-                Text(label,
-                    style: TextStyle(
-                        fontSize: 11,
-                        color: style.color,
-                        fontWeight: FontWeight.w600)),
-              ],
-            ),
+            width: 86,
+            child: Row(children: [
+              Icon(style.icon, size: 12, color: style.color),
+              const SizedBox(width: 4),
+              Text(label,
+                  style: TextStyle(
+                      fontSize: 11,
+                      color: style.color,
+                      fontWeight: FontWeight.w600)),
+            ]),
           ),
           Expanded(
             child: ClipRRect(
@@ -407,7 +431,7 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
           ),
           const SizedBox(width: 8),
           SizedBox(
-            width: 40,
+            width: 42,
             child: Text('${value.toStringAsFixed(1)}%',
                 style: TextStyle(
                     fontSize: 11,
@@ -419,30 +443,28 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
     );
   }
 
-  // ── Typing indicator ───────────────────────────────────────────────────
-  Widget _buildTypingIndicator() {
+  Widget _buildTypingIndicator(bool isDark, String lang) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-      child: Row(
-        children: [
-          Icon(Icons.favorite, size: 13, color: Colors.pink[300]),
-          const SizedBox(width: 6),
-          Text('Understanding your feelings...',
-              style: TextStyle(
-                  fontSize: 12,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey[500])),
-        ],
-      ),
+      child: Row(children: [
+        Icon(Icons.favorite, size: 13, color: Colors.pink[300]),
+        const SizedBox(width: 6),
+        Text(
+          AppStrings.get('understanding_feelings', lang),
+          style: TextStyle(
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+              color: isDark ? Colors.white54 : Colors.grey[500]),
+        ),
+      ]),
     );
   }
 
-  // ── Input area ─────────────────────────────────────────────────────────
-  Widget _buildInputArea() {
+  Widget _buildInputArea(bool isDark, String lang) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
         boxShadow: [
           BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -459,11 +481,13 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
               maxLines: 4,
               textInputAction: TextInputAction.send,
               onSubmitted: (_) => _sendMessage(),
+              style: TextStyle(color: isDark ? Colors.white : Colors.black87),
               decoration: InputDecoration(
-                hintText: 'Share how you feel...',
-                hintStyle: TextStyle(color: Colors.grey[400]),
+                hintText: AppStrings.get('share_how_you_feel', lang),
+                hintStyle: TextStyle(
+                    color: isDark ? Colors.white38 : Colors.grey[400]),
                 filled: true,
-                fillColor: Colors.grey[100],
+                fillColor: isDark ? const Color(0xFF1E2A3A) : Colors.grey[100],
                 contentPadding:
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 border: OutlineInputBorder(
@@ -476,7 +500,9 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
           FloatingActionButton(
             onPressed: _isTyping ? null : _sendMessage,
             mini: true,
-            backgroundColor: _isTyping ? Colors.grey[300] : Colors.deepPurple,
+            backgroundColor: _isTyping
+                ? (isDark ? Colors.white24 : Colors.grey[300])
+                : Colors.deepPurple,
             elevation: 2,
             child: Icon(
               _isTyping ? Icons.hourglass_top : Icons.send,
@@ -487,12 +513,5 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
         ],
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    _scrollController.dispose();
-    super.dispose();
   }
 }

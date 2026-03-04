@@ -1,71 +1,54 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/settings_provider.dart';
+import '../l10n/app_strings.dart';
 import 'body_scan_screen.dart';
 import 'mindful_grounding_screen.dart';
 
 class WellnessScreen extends StatelessWidget {
   const WellnessScreen({super.key});
 
-  final List<Map<String, dynamic>> _exercises = const [
-    {
-      'title': 'Box Breathing',
-      'description': '4-4-4-4 breathing technique to calm your mind',
-      'icon': Icons.air,
-      'color': Color(0xFF6B8CFF),
-      'duration': '5 min',
-      'steps': [
-        'Inhale slowly for 4 seconds',
-        'Hold your breath for 4 seconds',
-        'Exhale slowly for 4 seconds',
-        'Hold empty for 4 seconds',
-        'Repeat 4 times',
-      ],
-    },
-    {
-      'title': '4-7-8 Breathing',
-      'description': 'Relaxing breath technique to reduce anxiety',
-      'icon': Icons.self_improvement,
-      'color': Color(0xFF8B6FFF),
-      'duration': '3 min',
-      'steps': [
-        'Inhale quietly through nose for 4 seconds',
-        'Hold your breath for 7 seconds',
-        'Exhale completely through mouth for 8 seconds',
-        'Repeat 3-4 times',
-      ],
-    },
-    {
-      'title': 'Body Scan',
-      'description': 'Progressive relaxation from head to toe',
-      'icon': Icons.accessibility_new,
-      'color': Color(0xFF6FBBFF),
-      'duration': '10 min',
-      'steps': [
-        'Close your eyes and breathe naturally',
-        'Focus attention on the top of your head',
-        'Slowly move awareness down to your face',
-        'Continue down through neck, shoulders, arms',
-        'Move through chest, stomach, hips',
-        'Finally relax your legs and feet',
-      ],
-    },
-    {
-      'title': 'Mindful Grounding',
-      'description': '5-4-3-2-1 technique to stay present',
-      'icon': Icons.spa,
-      'color': Color(0xFF6FFFD4),
-      'duration': '5 min',
-      'steps': [
-        'Name 5 things you can see',
-        'Name 4 things you can touch',
-        'Name 3 things you can hear',
-        'Name 2 things you can smell',
-        'Name 1 thing you can taste',
-      ],
-    },
-  ];
-
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final lang = settings.language;
+    final isDark = settings.isDark;
+
+    final List<Map<String, dynamic>> exercises = [
+      {
+        'titleKey': 'box_breathing',
+        'descKey': 'box_breathing_desc',
+        'icon': Icons.air,
+        'color': const Color(0xFF6B8CFF),
+        'duration': '5 min',
+        'phaseType': 'box',
+      },
+      {
+        'titleKey': '478_breathing',
+        'descKey': '478_breathing_desc',
+        'icon': Icons.self_improvement,
+        'color': const Color(0xFF8B6FFF),
+        'duration': '3 min',
+        'phaseType': '478',
+      },
+      {
+        'titleKey': 'body_scan',
+        'descKey': 'body_scan_desc',
+        'icon': Icons.accessibility_new,
+        'color': const Color(0xFF6FBBFF),
+        'duration': '10 min',
+        'phaseType': 'bodyscan',
+      },
+      {
+        'titleKey': 'mindful_grounding',
+        'descKey': 'mindful_grounding_desc',
+        'icon': Icons.spa,
+        'color': const Color(0xFF6FFFD4),
+        'duration': '5 min',
+        'phaseType': 'grounding',
+      },
+    ];
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -81,21 +64,21 @@ class WellnessScreen extends StatelessWidget {
               ),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Column(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'How are you feeling?',
-                  style: TextStyle(
+                  AppStrings.get('how_are_you_feeling', lang),
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Text(
-                  'Track your mood and take a moment to relax',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                  AppStrings.get('wellness_subtitle', lang),
+                  style: const TextStyle(color: Colors.white70, fontSize: 14),
                 ),
               ],
             ),
@@ -103,23 +86,33 @@ class WellnessScreen extends StatelessWidget {
 
           const SizedBox(height: 20),
 
-          // Mood Tracker
-          const Text(
-            'Mood Today',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            AppStrings.get('mood_today', lang),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
           ),
           const SizedBox(height: 12),
-          _MoodTracker(),
+          //_MoodTracker(isDark: isDark, lang: lang),
 
           const SizedBox(height: 24),
 
-          // Breathing Exercises
-          const Text(
-            'Relaxation Exercises',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          Text(
+            AppStrings.get('relaxation_exercises', lang),
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
           ),
           const SizedBox(height: 12),
-          ..._exercises.map((exercise) => _ExerciseCard(exercise: exercise)),
+          ...exercises.map((e) => _ExerciseCard(
+                exercise: e,
+                isDark: isDark,
+                lang: lang,
+              )),
         ],
       ),
     );
@@ -127,103 +120,37 @@ class WellnessScreen extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────
-// Mood Tracker Widget
+// Mood Tracker
 // ─────────────────────────────────────────────
-
-class _MoodTracker extends StatefulWidget {
-  @override
-  State<_MoodTracker> createState() => _MoodTrackerState();
-}
-
-class _MoodTrackerState extends State<_MoodTracker> {
-  int? _selectedMood;
-
-  final List<Map<String, dynamic>> _moods = [
-    {'emoji': '😔', 'label': 'Sad'},
-    {'emoji': '😟', 'label': 'Stressed'},
-    {'emoji': '😐', 'label': 'Neutral'},
-    {'emoji': '🙂', 'label': 'Good'},
-    {'emoji': '😄', 'label': 'Great'},
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: List.generate(_moods.length, (index) {
-          final isSelected = _selectedMood == index;
-          return GestureDetector(
-            onTap: () => setState(() => _selectedMood = index),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? Colors.deepPurple.withOpacity(0.15)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isSelected ? Colors.deepPurple : Colors.transparent,
-                  width: 2,
-                ),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    _moods[index]['emoji'],
-                    style: TextStyle(fontSize: isSelected ? 32 : 26),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _moods[index]['label'],
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight:
-                          isSelected ? FontWeight.bold : FontWeight.normal,
-                      color: isSelected ? Colors.deepPurple : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-}
-
 // ─────────────────────────────────────────────
-// Exercise Card Widget
+// Exercise Card
 // ─────────────────────────────────────────────
 
 class _ExerciseCard extends StatelessWidget {
   final Map<String, dynamic> exercise;
-  const _ExerciseCard({required this.exercise});
+  final bool isDark;
+  final String lang;
+
+  const _ExerciseCard({
+    required this.exercise,
+    required this.isDark,
+    required this.lang,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final color = exercise['color'] as Color;
+    final title = AppStrings.get(exercise['titleKey'] as String, lang);
+    final desc = AppStrings.get(exercise['descKey'] as String, lang);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E2A3A) : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -234,35 +161,43 @@ class _ExerciseCard extends StatelessWidget {
         leading: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: (exercise['color'] as Color).withOpacity(0.15),
+            color: color.withOpacity(0.15),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(
-            exercise['icon'] as IconData,
-            color: exercise['color'] as Color,
-            size: 28,
-          ),
+          child: Icon(exercise['icon'] as IconData, color: color, size: 28),
         ),
         title: Text(
-          exercise['title'],
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          title,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
             Text(
-              exercise['description'],
-              style: TextStyle(color: Colors.grey[600], fontSize: 13),
+              desc,
+              style: TextStyle(
+                color: isDark ? Colors.white54 : Colors.grey[600],
+                fontSize: 13,
+              ),
             ),
             const SizedBox(height: 6),
             Row(
               children: [
-                Icon(Icons.timer_outlined, size: 14, color: Colors.grey[500]),
+                Icon(Icons.timer_outlined,
+                    size: 14,
+                    color: isDark ? Colors.white38 : Colors.grey[500]),
                 const SizedBox(width: 4),
                 Text(
-                  exercise['duration'],
-                  style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                  exercise['duration'] as String,
+                  style: TextStyle(
+                    color: isDark ? Colors.white38 : Colors.grey[500],
+                    fontSize: 12,
+                  ),
                 ),
               ],
             ),
@@ -270,23 +205,36 @@ class _ExerciseCard extends StatelessWidget {
         ),
         trailing: const Icon(Icons.chevron_right, color: Colors.deepPurple),
         onTap: () {
-          if (exercise['title'] == 'Body Scan') {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const BodyScanScreen()),
-            );
-          } else if (exercise['title'] == 'Mindful Grounding') {
+          final phaseType = exercise['phaseType'] as String;
+          if (phaseType == 'bodyscan') {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (context) => const MindfulGroundingScreen()),
+                // ✅ lang and isDark now passed through
+                builder: (_) => BodyScanScreen(lang: lang, isDark: isDark),
+              ),
+            );
+          } else if (phaseType == 'grounding') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                // ✅ lang and isDark now passed through
+                builder: (_) =>
+                    MindfulGroundingScreen(lang: lang, isDark: isDark),
+              ),
             );
           } else {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) =>
-                    _BreathingAnimationScreen(exercise: exercise),
+                builder: (_) => _BreathingAnimationScreen(
+                  title: title,
+                  description: desc,
+                  color: color,
+                  phaseType: phaseType,
+                  isDark: isDark,
+                  lang: lang,
+                ),
               ),
             );
           }
@@ -295,13 +243,27 @@ class _ExerciseCard extends StatelessWidget {
     );
   }
 }
+
 // ─────────────────────────────────────────────
 // Breathing Animation Screen
 // ─────────────────────────────────────────────
 
 class _BreathingAnimationScreen extends StatefulWidget {
-  final Map<String, dynamic> exercise;
-  const _BreathingAnimationScreen({required this.exercise});
+  final String title;
+  final String description;
+  final Color color;
+  final String phaseType;
+  final bool isDark;
+  final String lang;
+
+  const _BreathingAnimationScreen({
+    required this.title,
+    required this.description,
+    required this.color,
+    required this.phaseType,
+    required this.isDark,
+    required this.lang,
+  });
 
   @override
   State<_BreathingAnimationScreen> createState() =>
@@ -317,7 +279,7 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
   late Animation<Color?> _colorAnimation;
 
   int _currentPhase = 0;
-  String _phaseLabel = 'Get Ready';
+  String _phaseLabel = '';
   bool _isRunning = false;
   int _cycleCount = 0;
   int _countdown = 0;
@@ -327,8 +289,8 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
   @override
   void initState() {
     super.initState();
-
-    _phases = _getPhasesForExercise(widget.exercise['title']);
+    _phases = _getPhasesForType(widget.phaseType);
+    _phaseLabel = AppStrings.get('get_ready', widget.lang);
 
     _breathController = AnimationController(
       vsync: this,
@@ -343,36 +305,34 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
     _scaleAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
       CurvedAnimation(parent: _breathController, curve: Curves.easeInOut),
     );
-
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
-
     _colorAnimation = ColorTween(
       begin: const Color(0xFF6B8CFF),
       end: const Color(0xFF8B6FFF),
     ).animate(_breathController);
   }
 
-  List<Map<String, dynamic>> _getPhasesForExercise(String title) {
-    switch (title) {
-      case 'Box Breathing':
+  List<Map<String, dynamic>> _getPhasesForType(String type) {
+    switch (type) {
+      case 'box':
         return [
-          {'label': 'Inhale', 'duration': 4, 'expand': true},
-          {'label': 'Hold', 'duration': 4, 'expand': false},
-          {'label': 'Exhale', 'duration': 4, 'expand': false},
-          {'label': 'Hold', 'duration': 4, 'expand': false},
+          {'labelKey': 'inhale', 'duration': 4, 'expand': true},
+          {'labelKey': 'hold', 'duration': 4, 'expand': false},
+          {'labelKey': 'exhale', 'duration': 4, 'expand': false},
+          {'labelKey': 'hold', 'duration': 4, 'expand': false},
         ];
-      case '4-7-8 Breathing':
+      case '478':
         return [
-          {'label': 'Inhale', 'duration': 4, 'expand': true},
-          {'label': 'Hold', 'duration': 7, 'expand': false},
-          {'label': 'Exhale', 'duration': 8, 'expand': false},
+          {'labelKey': 'inhale', 'duration': 4, 'expand': true},
+          {'labelKey': 'hold', 'duration': 7, 'expand': false},
+          {'labelKey': 'exhale', 'duration': 8, 'expand': false},
         ];
       default:
         return [
-          {'label': 'Inhale', 'duration': 4, 'expand': true},
-          {'label': 'Exhale', 'duration': 4, 'expand': false},
+          {'labelKey': 'inhale', 'duration': 4, 'expand': true},
+          {'labelKey': 'exhale', 'duration': 4, 'expand': false},
         ];
     }
   }
@@ -391,7 +351,7 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
     _breathController.reset();
     setState(() {
       _isRunning = false;
-      _phaseLabel = 'Get Ready';
+      _phaseLabel = AppStrings.get('get_ready', widget.lang);
       _currentPhase = 0;
       _countdown = 0;
     });
@@ -406,7 +366,7 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
 
     setState(() {
       _currentPhase = phaseIndex;
-      _phaseLabel = phase['label'] as String;
+      _phaseLabel = AppStrings.get(phase['labelKey'] as String, widget.lang);
       _countdown = duration;
     });
 
@@ -414,7 +374,7 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
 
     if (expand) {
       _breathController.forward(from: _breathController.value);
-    } else if (phase['label'] == 'Exhale' || phase['label'] == 'Breathe Out') {
+    } else if (phase['labelKey'] == 'exhale') {
       _breathController.reverse(from: _breathController.value);
     }
 
@@ -427,9 +387,7 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
     if (!mounted || !_isRunning) return;
 
     final nextPhase = (phaseIndex + 1) % _phases.length;
-    if (nextPhase == 0) {
-      setState(() => _cycleCount++);
-    }
+    if (nextPhase == 0) setState(() => _cycleCount++);
     _runPhase(nextPhase);
   }
 
@@ -442,30 +400,32 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final color = widget.exercise['color'] as Color;
+    final lang = widget.lang;
+    final isDark = widget.isDark;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor:
+          isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text(widget.exercise['title'] as String),
-        backgroundColor: Colors.transparent,
+        title: Text(widget.title),
+        backgroundColor: isDark ? const Color(0xFF16213E) : Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.deepPurple,
+        foregroundColor: isDark ? Colors.white : Colors.deepPurple,
       ),
       body: Column(
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Text(
-              widget.exercise['description'] as String,
+              widget.description,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600], fontSize: 14),
+              style: TextStyle(
+                color: isDark ? Colors.white54 : Colors.grey[600],
+                fontSize: 14,
+              ),
             ),
           ),
-
           const Spacer(),
-
-          // Animated breathing circle
           Center(
             child: AnimatedBuilder(
               animation:
@@ -473,12 +433,11 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
               builder: (context, child) {
                 final scale = _scaleAnimation.value;
                 final pulse = _isRunning ? 1.0 : _pulseAnimation.value;
-                final animColor = _colorAnimation.value ?? color;
+                final animColor = _colorAnimation.value ?? widget.color;
 
                 return Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Outer glow rings
                     ...List.generate(3, (i) {
                       return Container(
                         width: 220 + (i * 30.0) + (scale * 40),
@@ -490,8 +449,6 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
                         ),
                       );
                     }),
-
-                    // Main circle
                     Transform.scale(
                       scale: pulse,
                       child: Container(
@@ -517,7 +474,9 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(
-                              _isRunning ? _phaseLabel : 'Tap Start',
+                              _isRunning
+                                  ? _phaseLabel
+                                  : AppStrings.get('tap_start', lang),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 22,
@@ -544,19 +503,16 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
               },
             ),
           ),
-
           const Spacer(),
-
-          // Cycle counter
           if (_isRunning)
             Text(
-              'Cycles completed: $_cycleCount',
-              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+              '${AppStrings.get('cycles_completed', lang)}: $_cycleCount',
+              style: TextStyle(
+                color: isDark ? Colors.white38 : Colors.grey[500],
+                fontSize: 13,
+              ),
             ),
-
           const SizedBox(height: 16),
-
-          // Phase indicator dots
           if (_isRunning)
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -569,25 +525,25 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
                   decoration: BoxDecoration(
                     color: _currentPhase == i
                         ? Colors.deepPurple
-                        : Colors.grey[300],
+                        : (isDark ? Colors.white24 : Colors.grey[300]),
                     borderRadius: BorderRadius.circular(4),
                   ),
                 );
               }),
             ),
-
           const SizedBox(height: 24),
-
-          // Start / Stop button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 40),
             child: SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      _isRunning ? Colors.grey[300] : Colors.deepPurple,
-                  foregroundColor: _isRunning ? Colors.grey[700] : Colors.white,
+                  backgroundColor: _isRunning
+                      ? (isDark ? Colors.white24 : Colors.grey[300])
+                      : Colors.deepPurple,
+                  foregroundColor: _isRunning
+                      ? (isDark ? Colors.white70 : Colors.grey[700])
+                      : Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -596,14 +552,15 @@ class _BreathingAnimationScreenState extends State<_BreathingAnimationScreen>
                 ),
                 onPressed: _isRunning ? _stopBreathing : _startBreathing,
                 child: Text(
-                  _isRunning ? 'Stop' : 'Start Breathing',
+                  _isRunning
+                      ? AppStrings.get('stop', lang)
+                      : AppStrings.get('start_breathing', lang),
                   style: const TextStyle(
                       fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
           ),
-
           const SizedBox(height: 40),
         ],
       ),

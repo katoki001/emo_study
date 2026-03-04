@@ -1,21 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'screens/home_screen.dart';
-import 'screens/splash_screen.dart'; // ← your new splash file
+import 'screens/splash_screen.dart';
 import 'screens/playlist_screen.dart';
 import 'screens/music_player_screen.dart';
+import 'screens/sign_in_screen.dart';
+import 'screens/sign_up_screen.dart';
+import 'screens/lectures_screen.dart'; // ← new
 import 'models/user_progress.dart';
 import 'providers/music_player_provider.dart';
+import 'providers/settings_provider.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'https://pvxdujouozdkgyuialpi.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2eGR1am91b3pka2d5dWlhbHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NDg3MDAsImV4cCI6MjA4NzUyNDcwMH0.7zJOZkg8oIfhUj2d1lwLci9xwJm08jUgBOoFv6YCat4',
+  );
 
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProgress()),
         ChangeNotifierProvider(create: (_) => MusicPlayerProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
       child: const MyApp(),
     ),
@@ -27,20 +39,37 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WorldClassroom',
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        useMaterial3: true,
-        fontFamily: 'Nunito',
-      ),
-      debugShowCheckedModeBanner: false,
-      initialRoute: '/splash', // ← starts on splash
-      routes: {
-        '/splash': (context) => const SplashScreen(), // splash file
-        '/': (context) => const HomeScreen(),
-        '/playlist': (context) => const PlaylistScreen(),
-        '/music-player': (context) => const MusicPlayerScreen(),
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        return MaterialApp(
+          title: 'WorldClassroom',
+          themeMode: settings.themeMode,
+          theme: ThemeData(
+            colorSchemeSeed: Colors.deepPurple,
+            brightness: Brightness.light,
+            useMaterial3: true,
+            fontFamily: 'Nunito',
+          ),
+          darkTheme: ThemeData(
+            colorSchemeSeed: Colors.deepPurple,
+            brightness: Brightness.dark,
+            useMaterial3: true,
+            fontFamily: 'Nunito',
+          ),
+          debugShowCheckedModeBanner: false,
+          initialRoute: '/splash',
+          routes: {
+            '/splash': (context) => const SplashScreen(),
+            '/sign-in': (context) => const SignInScreen(),
+            '/sign-up': (context) => const SignUpScreen(),
+            '/': (context) => const HomeScreen(),
+            '/playlist': (context) => const PlaylistScreen(),
+            '/music-player': (context) => const MusicPlayerScreen(),
+            // ── Education routes ──────────────────────────────
+            LecturesScreen.routeName: (context) => const LecturesScreen(),
+            FlashcardsScreen.routeName: (context) => const FlashcardsScreen(),
+          },
+        );
       },
     );
   }

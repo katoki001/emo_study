@@ -10,16 +10,20 @@ dependencies:
   flutter:
     sdk: flutter
   provider: ^6.1.1
-  fl_chart: ^1.1.1  # For charts
-  http: ^1.6.0      # For API calls to Python backend
+  fl_chart: ^1.1.1
+  http: ^1.6.0
   audioplayers: ^6.5.1
   flutter_local_notifications: ^20.1.0
   wakelock_plus: ^1.1.4
+  supabase_flutter: ^2.0.0
+  file_picker: ^8.1.2
+  shared_preferences: ^2.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -30,4 +34,12 @@ flutter:
     - assets/audio/lofi4.mp3
     - assets/audio/lofi5.mp3
     - assets/images/
-    
+    - assets/icons/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#1C2E4A"
+  adaptive_icon_foreground: "assets/icons/app_icon_foreground.png"
