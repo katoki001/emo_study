@@ -16,8 +16,8 @@ import 'providers/music_player_provider.dart';
 import 'providers/settings_provider.dart';
 
 void main() async {
-  await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: ".env");
   usePathUrlStrategy();
 
   await Firebase.initializeApp(
