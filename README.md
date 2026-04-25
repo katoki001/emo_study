@@ -75,7 +75,7 @@ GROQ_API_KEY = "YOUR API KEY (GROQ)"
 
 3. In the **last cell**, find lines 22–23 from the end and replace the ngrok token with your own:
 ```python
-ngrok.set_auth_token('Your ngrok auth token here')
+NGROK_AUTH_TOKEN = 'Your ngrok auth token here'
 ```
 
 4. Run all cells in the notebook.
