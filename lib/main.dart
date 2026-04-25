@@ -1,28 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'firebase_options.dart';
 import 'screens/home_screen.dart';
 import 'screens/splash_screen.dart';
 import 'screens/playlist_screen.dart';
 import 'screens/music_player_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/sign_up_screen.dart';
-import 'screens/lectures_screen.dart'; // ← new
+import 'screens/lectures_screen.dart';
 import 'models/user_progress.dart';
 import 'providers/music_player_provider.dart';
 import 'providers/settings_provider.dart';
 
 void main() async {
-  usePathUrlStrategy();
-  runApp(MyApp());
-
+  await dotenv.load(fileName: ".env");
   WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
 
-  await Supabase.initialize(
-    url: 'https://pvxdujouozdkgyuialpi.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2eGR1am91b3pka2d5dWlhbHBpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE5NDg3MDAsImV4cCI6MjA4NzUyNDcwMH0.7zJOZkg8oIfhUj2d1lwLci9xwJm08jUgBOoFv6YCat4',
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
 
   runApp(
@@ -68,7 +67,6 @@ class MyApp extends StatelessWidget {
             '/': (context) => const HomeScreen(),
             '/playlist': (context) => const PlaylistScreen(),
             '/music-player': (context) => const MusicPlayerScreen(),
-            // ── Education routes ──────────────────────────────
             LecturesScreen.routeName: (context) => const LecturesScreen(),
             FlashcardsScreen.routeName: (context) => const FlashcardsScreen(),
           },

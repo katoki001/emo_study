@@ -82,8 +82,7 @@ class ChatResult {
 
 class ColabAIService {
   // ── Paste your MENTAL HEALTH backend ngrok URL here ──
-  static const String baseUrl =
-      "https://melda-unsplittable-xiomara.ngrok-free.dev";
+  static const String baseUrl = "Mental health link here";
 
   static const Map<String, String> _headers = {
     'Content-Type': 'application/json',

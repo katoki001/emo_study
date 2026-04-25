@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -90,8 +90,9 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _checkAuthAndNavigate() {
     if (!mounted) return;
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session != null) {
+    // ← Only change: Firebase instead of Supabase
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
       Navigator.of(context).pushReplacementNamed('/');
     } else {
       Navigator.of(context).pushReplacementNamed('/sign-in');

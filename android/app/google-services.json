@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "341908789581",
+    "project_id": "worldclassroom-a332c",
+    "storage_bucket": "worldclassroom-a332c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:341908789581:android:667cb16874cf29a9513f04",
+        "android_client_info": {
+          "package_name": "com.example.ai_learning_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAafxgNeXVVL8DeeVuKQ08Gj5owgu5aAAs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

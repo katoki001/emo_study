@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // ← was supabase
 
 import '../services/auth_service.dart';
 
@@ -62,8 +62,9 @@ class _SignInScreenState extends State<SignInScreen>
         password: _passwordController.text,
       );
       if (mounted) Navigator.of(context).pushReplacementNamed('/');
-    } on AuthException catch (e) {
-      setState(() => _errorMessage = _mapError(e.message));
+    } on FirebaseAuthException catch (e) {
+      // ← was AuthException
+      setState(() => _errorMessage = _mapError(e.code));
     } catch (_) {
       setState(() => _errorMessage = 'Something went wrong. Please try again.');
     } finally {
@@ -86,21 +87,28 @@ class _SignInScreenState extends State<SignInScreen>
               content: Text('Password reset email sent! Check your inbox.')),
         );
       }
-    } on AuthException catch (e) {
-      setState(() => _errorMessage = _mapError(e.message));
+    } on FirebaseAuthException catch (e) {
+      // ← was AuthException
+      setState(() => _errorMessage = _mapError(e.code));
     }
   }
 
-  String _mapError(String message) {
-    if (message.contains('Invalid login'))
-      return 'Incorrect email or password.';
-    if (message.contains('Email not confirmed'))
-      return 'Please confirm your email first.';
-    if (message.contains('too many requests'))
-      return 'Too many attempts. Try again later.';
-    return message;
+  String _mapError(String code) {
+    switch (code) {
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Incorrect email or password.';
+      case 'too-many-requests':
+        return 'Too many attempts. Try again later.';
+      case 'user-disabled':
+        return 'This account has been disabled.';
+      default:
+        return 'Something went wrong. Please try again.';
+    }
   }
 
+  // ── The entire build method and helpers are UNCHANGED ──
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -124,8 +132,6 @@ class _SignInScreenState extends State<SignInScreen>
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     const SizedBox(height: 32),
-
-                    // Logo
                     Container(
                       width: 72,
                       height: 72,
@@ -144,9 +150,7 @@ class _SignInScreenState extends State<SignInScreen>
                       child: const Center(
                           child: Text('🌍', style: TextStyle(fontSize: 36))),
                     ),
-
                     const SizedBox(height: 20),
-
                     RichText(
                       text: const TextSpan(children: [
                         TextSpan(
@@ -165,13 +169,10 @@ class _SignInScreenState extends State<SignInScreen>
                                 letterSpacing: -0.5)),
                       ]),
                     ),
-
                     const SizedBox(height: 8),
                     const Text('Welcome back',
                         style: TextStyle(fontSize: 14, color: _textSoft)),
-
                     const SizedBox(height: 40),
-
                     _buildTextField(
                       controller: _emailController,
                       label: 'Email',
@@ -186,9 +187,7 @@ class _SignInScreenState extends State<SignInScreen>
                         return null;
                       },
                     ),
-
                     const SizedBox(height: 16),
-
                     _buildTextField(
                       controller: _passwordController,
                       label: 'Password',
@@ -209,31 +208,25 @@ class _SignInScreenState extends State<SignInScreen>
                           ? 'Password is required'
                           : null,
                     ),
-
                     const SizedBox(height: 8),
-
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
                         onPressed: _forgotPassword,
                         style: TextButton.styleFrom(
-                          foregroundColor: _primary,
-                          padding: EdgeInsets.zero,
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
+                            foregroundColor: _primary,
+                            padding: EdgeInsets.zero,
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap),
                         child: const Text('Forgot password?',
                             style: TextStyle(fontSize: 13)),
                       ),
                     ),
-
                     if (_errorMessage != null) ...[
                       const SizedBox(height: 12),
                       _buildErrorBox(_errorMessage!),
                     ],
-
                     const SizedBox(height: 28),
-
                     SizedBox(
                       width: double.infinity,
                       height: 52,
@@ -260,25 +253,20 @@ class _SignInScreenState extends State<SignInScreen>
                                     letterSpacing: 0.3)),
                       ),
                     ),
-
                     const SizedBox(height: 24),
-
                     Row(children: [
                       Expanded(
                           child: Divider(color: _textSoft.withOpacity(0.3))),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('or',
-                            style: TextStyle(
-                                color: _textSoft.withOpacity(0.7),
-                                fontSize: 13)),
-                      ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('or',
+                              style: TextStyle(
+                                  color: _textSoft.withOpacity(0.7),
+                                  fontSize: 13))),
                       Expanded(
                           child: Divider(color: _textSoft.withOpacity(0.3))),
                     ]),
-
                     const SizedBox(height: 20),
-
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -295,7 +283,6 @@ class _SignInScreenState extends State<SignInScreen>
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -311,10 +298,9 @@ class _SignInScreenState extends State<SignInScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: _error.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _error.withOpacity(0.4)),
-      ),
+          color: _error.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: _error.withOpacity(0.4))),
       child: Row(children: [
         const Icon(Icons.error_outline, color: _error, size: 16),
         const SizedBox(width: 8),

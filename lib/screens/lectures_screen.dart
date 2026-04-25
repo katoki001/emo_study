@@ -1,14 +1,14 @@
 import 'dart:convert';
+import 'package:ai_learning_companion/services/firebase_storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import '../providers/settings_provider.dart';
 import '../l10n/app_strings.dart';
-import '../services/supabase_storage_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-const String _kApiBase =
-    "https://unprotestingly-uninformative-earlean.ngrok-free.dev";
+const String _kApiBase = "https://YOUR-EDUCATIONAL-URL.ngrok-free.app";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ROUTE ARGUMENTS
@@ -60,7 +60,7 @@ class _LecturesScreenState extends State<LecturesScreen> {
     setState(() => _loading = true);
     try {
       final list =
-          await SupabaseStorageService.instance.loadLectures(_args.subject);
+          await FirebaseStorageService.instance.loadLectures(_args.subject);
       if (mounted) setState(() => _lectures = list);
     } catch (e) {
       if (mounted) {
@@ -119,7 +119,7 @@ class _LecturesScreenState extends State<LecturesScreen> {
 
       final summary = body['summary'] as String;
 
-      final saved = await SupabaseStorageService.instance.saveLecture(
+      final saved = await FirebaseStorageService.instance.saveLecture(
         subject: _args.subject,
         filename: name,
         summary: summary,
@@ -155,7 +155,7 @@ class _LecturesScreenState extends State<LecturesScreen> {
       ),
     );
     if (confirmed != true) return;
-    await SupabaseStorageService.instance.deleteLecture(lecture.id);
+    await FirebaseStorageService.instance.deleteLecture(lecture.id);
     if (mounted) {
       setState(() => _lectures.removeWhere((l) => l.id == lecture.id));
     }

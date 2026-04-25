@@ -4,6 +4,7 @@ import 'ai_supporter_screen.dart';
 import 'education_screen.dart';
 import 'study_timer.dart';
 import 'music_player_screen.dart';
+import 'emotional_memories_screen.dart';
 import '../providers/music_player_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/mini_player.dart';
@@ -27,6 +28,13 @@ class _HomeScreenState extends State<HomeScreen> {
     const WellnessScreen(),
     const StudyTimerScreen(),
   ];
+
+  void _openMemories() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const EmotionalMemoriesScreen()),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +63,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 isDark ? const Color(0xFF16213E) : Colors.deepPurple[50],
             elevation: 0,
             actions: [
-              // Music button with status indicator
+              // ── Memories button (only on AI Supporter tab) ────────────
+              if (_selectedIndex == 1)
+                IconButton(
+                  icon: Icon(
+                    Icons.auto_stories_outlined,
+                    color: isDark ? Colors.white70 : Colors.grey[700],
+                  ),
+                  onPressed: _openMemories,
+                  tooltip: AppStrings.get('view_memories', lang),
+                ),
+
+              // ── Music button ──────────────────────────────────────────
               Consumer<MusicPlayerProvider>(
                 builder: (context, musicProvider, child) {
                   return Stack(
@@ -70,9 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               ? Colors.deepPurple
                               : (isDark ? Colors.white70 : Colors.grey[700]),
                         ),
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/playlist');
-                        },
+                        onPressed: () =>
+                            Navigator.pushNamed(context, '/playlist'),
                         tooltip: musicProvider.isPlaying
                             ? '${AppStrings.get('now_playing', lang)}: ${musicProvider.currentMusic?.title ?? "Music"}'
                             : AppStrings.get('open_music', lang),
@@ -94,16 +112,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   );
                 },
               ),
+
+              // ── Settings button ───────────────────────────────────────
               IconButton(
                 icon: const Icon(Icons.settings),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const SettingsScreen(),
-                    ),
-                  );
-                },
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                ),
                 tooltip: AppStrings.get('settings', lang),
               ),
             ],
@@ -138,11 +154,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _selectedIndex,
-            onTap: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
+            onTap: (index) => setState(() => _selectedIndex = index),
             type: BottomNavigationBarType.fixed,
             selectedItemColor: Colors.deepPurple,
             unselectedItemColor: isDark ? Colors.white54 : Colors.grey[600],

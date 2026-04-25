@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:ai_learning_companion/services/firebase_storage_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
@@ -6,12 +7,11 @@ import 'package:file_picker/file_picker.dart';
 import '../widgets/subject_card.dart';
 import '../providers/settings_provider.dart';
 import '../l10n/app_strings.dart';
-import '../services/supabase_storage_service.dart';
+
 import 'lectures_screen.dart';
 
 // ── Update this whenever ngrok restarts ──────────────────────
-const String kApiBase =
-    "https://unprotestingly-uninformative-earlean.ngrok-free.dev";
+const String kApiBase = "Educational link here";
 
 final List<Map<String, dynamic>> kSubjects = [
   {
@@ -152,7 +152,7 @@ class EducationScreen extends StatelessWidget {
 
       final summary = body['summary'] as String;
 
-      await SupabaseStorageService.instance.saveLecture(
+      await FirebaseStorageService.instance.saveLecture(
         subject: subject,
         filename: name,
         summary: summary,
@@ -262,7 +262,7 @@ class _AiChatSheetState extends State<_AiChatSheet> {
   Future<void> _loadHistory() async {
     try {
       final msgs =
-          await SupabaseStorageService.instance.loadMessages(widget.subject);
+          await FirebaseStorageService.instance.loadMessages(widget.subject);
       if (mounted) setState(() => _messages.addAll(msgs));
     } catch (e) {
       debugPrint('History load error: $e');
@@ -279,7 +279,7 @@ class _AiChatSheetState extends State<_AiChatSheet> {
     // ── Read language from provider ──
     final lang = context.read<SettingsProvider>().language;
 
-    final userMsg = await SupabaseStorageService.instance.saveMessage(
+    final userMsg = await FirebaseStorageService.instance.saveMessage(
       subject: widget.subject,
       role: 'user',
       text: text,
@@ -304,14 +304,14 @@ class _AiChatSheetState extends State<_AiChatSheet> {
           ? (jsonDecode(res.body) as Map<String, dynamic>)['response'] as String
           : 'Error ${res.statusCode}';
 
-      final aiMsg = await SupabaseStorageService.instance.saveMessage(
+      final aiMsg = await FirebaseStorageService.instance.saveMessage(
         subject: widget.subject,
         role: 'ai',
         text: reply,
       );
       if (mounted) setState(() => _messages.add(aiMsg));
     } catch (e) {
-      final aiMsg = await SupabaseStorageService.instance.saveMessage(
+      final aiMsg = await FirebaseStorageService.instance.saveMessage(
         subject: widget.subject,
         role: 'ai',
         text: 'Failed: $e',
@@ -344,7 +344,7 @@ class _AiChatSheetState extends State<_AiChatSheet> {
       ),
     );
     if (confirmed != true) return;
-    await SupabaseStorageService.instance.clearHistory(widget.subject);
+    await FirebaseStorageService.instance.clearHistory(widget.subject);
     if (mounted) setState(() => _messages.clear());
   }
 

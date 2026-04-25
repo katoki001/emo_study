@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/settings_provider.dart';
 import '../l10n/app_strings.dart';
 import '../services/colab_ai_service.dart';
+import 'emotional_memories_screen.dart'; // EmotionalMemoryService lives here
 
 class ChatMessage {
   final String text;
@@ -41,8 +42,10 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
   final ScrollController _scrollCtrl = ScrollController();
   final List<ChatMessage> _messages = [];
   final List<Map<String, String>> _history = [];
+
   bool _isTyping = false;
   bool _serverOnline = false;
+  bool _savingMemory = false;
   MentalState _latestState = MentalState.neutral();
 
   @override
@@ -55,6 +58,10 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
   void dispose() {
     _controller.dispose();
     _scrollCtrl.dispose();
+    // Save silently when navigating away if there was an actual exchange
+    if (_history.length >= 2) {
+      _saveMemoryBackground();
+    }
     super.dispose();
   }
 
@@ -63,14 +70,185 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
     if (mounted) setState(() => _serverOnline = online);
   }
 
+  // ── Save current session as a memory, then clear ─────────────────────────
+
   Future<void> _resetConversation() async {
+    if (_history.length >= 2) await _saveMemory();
     await ColabAIService.resetSession();
-    setState(() {
-      _messages.clear();
-      _history.clear();
-      _latestState = MentalState.neutral();
-    });
+    if (mounted) {
+      setState(() {
+        _messages.clear();
+        _history.clear();
+        _latestState = MentalState.neutral();
+      });
+    }
   }
+
+  // Called from dispose — no setState, no mounted checks, fire and forget
+  Future<void> _saveMemoryBackground() async {
+    try {
+      final firstUserMsg = _history.firstWhere((m) => m['role'] == 'user',
+              orElse: () => {'content': 'Session'})['content'] ??
+          'Session';
+      final title = firstUserMsg.length > 48
+          ? '${firstUserMsg.substring(0, 45)}…'
+          : firstUserMsg;
+
+      final lastAiMsg = _history.lastWhere((m) => m['role'] == 'assistant',
+              orElse: () => {'content': ''})['content'] ??
+          '';
+      final summary = lastAiMsg.length > 160
+          ? '${lastAiMsg.substring(0, 157)}…'
+          : lastAiMsg;
+
+      final turns = _history
+          .map((m) => <String, String>{
+                'role': m['role'] ?? '',
+                'text': m['content'] ?? '',
+              })
+          .toList();
+
+      final Map<String, double> scoresJson;
+      int aiMessageCount = 0;
+      final Map<String, double> accumulatedScores = {};
+      for (final msg in _messages) {
+        if (!msg.isUser && msg.mentalState != null) {
+          aiMessageCount++;
+          msg.mentalState!.toMap().forEach((state, value) {
+            accumulatedScores[state] = (accumulatedScores[state] ?? 0) + value;
+          });
+        }
+      }
+      scoresJson = aiMessageCount > 0
+          ? accumulatedScores.map((k, v) => MapEntry(k, v / aiMessageCount))
+          : _latestState.toMap();
+
+      final dominantState = scoresJson.isNotEmpty
+          ? scoresJson.entries.reduce((a, b) => a.value >= b.value ? a : b).key
+          : 'Normal';
+
+      await EmotionalMemoryService.instance.save(
+        title: title,
+        summary: summary.isEmpty ? 'No AI response recorded.' : summary,
+        dominantState: dominantState,
+        stateScores: scoresJson,
+        turns: turns,
+      );
+    } catch (e) {
+      debugPrint('_saveMemoryBackground error: $e');
+    }
+  }
+
+  Future<void> _saveMemory() async {
+    if (mounted) setState(() => _savingMemory = true);
+
+    try {
+      // Build a short title from the first user message
+      final firstUserMsg = _history.firstWhere((m) => m['role'] == 'user',
+              orElse: () => {'content': 'Session'})['content'] ??
+          'Session';
+      final title = firstUserMsg.length > 48
+          ? '${firstUserMsg.substring(0, 45)}…'
+          : firstUserMsg;
+
+      // Build a one-sentence summary from the last assistant message
+      final lastAiMsg = _history.lastWhere((m) => m['role'] == 'assistant',
+              orElse: () => {'content': ''})['content'] ??
+          '';
+      final summary = lastAiMsg.length > 160
+          ? '${lastAiMsg.substring(0, 157)}…'
+          : lastAiMsg;
+
+      // Convert history {role, content} → {role, text} for storage
+      // Explicitly typed as List<Map<String, String>> to match service
+      final turns = _history
+          .map((m) => <String, String>{
+                'role': m['role'] ?? '',
+                'text': m['content'] ?? '',
+              })
+          .toList();
+
+      // Average state scores across ALL AI messages in this conversation
+      // so the dominant colour reflects the whole session, not just the last reply
+      final Map<String, double> accumulatedScores = {};
+      int aiMessageCount = 0;
+
+      for (final msg in _messages) {
+        if (!msg.isUser && msg.mentalState != null) {
+          aiMessageCount++;
+          msg.mentalState!.toMap().forEach((state, value) {
+            accumulatedScores[state] = (accumulatedScores[state] ?? 0) + value;
+          });
+        }
+      }
+
+      // Average them out (fall back to latest state if no AI messages found)
+      final Map<String, double> scoresJson;
+      if (aiMessageCount > 0) {
+        scoresJson =
+            accumulatedScores.map((k, v) => MapEntry(k, v / aiMessageCount));
+      } else {
+        scoresJson = _latestState.toMap();
+      }
+
+      final dominantState = scoresJson.isNotEmpty
+          ? scoresJson.entries.reduce((a, b) => a.value >= b.value ? a : b).key
+          : 'Normal';
+
+      await EmotionalMemoryService.instance.save(
+        title: title,
+        summary: summary.isEmpty ? 'No AI response recorded.' : summary,
+        dominantState: dominantState,
+        stateScores: scoresJson,
+        turns: turns,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Row(children: [
+              Icon(Icons.check_circle_outline, color: Colors.white, size: 16),
+              SizedBox(width: 8),
+              Text('Memory saved', style: TextStyle(fontSize: 13)),
+            ]),
+            backgroundColor: Colors.deepPurple,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('_saveMemory error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Could not save memory: $e',
+              style: const TextStyle(fontSize: 11),
+              maxLines: 3,
+            ),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _savingMemory = false);
+    }
+  }
+
+  // ── Open memories screen ─────────────────────────────────────────────────
+
+  void _openMemories() {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const EmotionalMemoriesScreen()),
+    );
+  }
+
+  // ── Send message ─────────────────────────────────────────────────────────
 
   Future<void> _sendMessage([String? override]) async {
     final text = (override ?? _controller.text).trim();
@@ -116,20 +294,42 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
     });
   }
 
+  // ── Build ────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final settings = context.watch<SettingsProvider>();
     final isDark = settings.isDark;
     final lang = settings.language;
 
-    return Column(
+    return Stack(
       children: [
-        _buildHeader(isDark, lang),
-        if (!_serverOnline) _buildOfflineBanner(isDark, lang),
-        _buildQuickActions(lang),
-        Expanded(child: _buildMessageList(isDark, lang)),
-        if (_isTyping) _buildTypingIndicator(isDark, lang),
-        _buildInputArea(isDark, lang),
+        Column(
+          children: [
+            _buildHeader(isDark, lang),
+            if (!_serverOnline) _buildOfflineBanner(isDark, lang),
+            _buildQuickActions(lang),
+            Expanded(child: _buildMessageList(isDark, lang)),
+            if (_isTyping) _buildTypingIndicator(isDark, lang),
+            _buildInputArea(isDark, lang),
+          ],
+        ),
+        // Saving overlay
+        if (_savingMemory)
+          Container(
+            color: Colors.black38,
+            child: const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 14),
+                  Text('Saving memory…',
+                      style: TextStyle(color: Colors.white, fontSize: 14)),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -193,12 +393,21 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
               ],
             ),
           ),
+          // ── Memories button ─────────────────────────────────────────
+          IconButton(
+            icon: Icon(Icons.auto_stories_outlined,
+                size: 20, color: isDark ? Colors.white70 : Colors.grey[700]),
+            tooltip: AppStrings.get('view_memories', lang),
+            onPressed: _openMemories,
+          ),
+          // ── New session button ───────────────────────────────────────
           IconButton(
             icon: Icon(Icons.refresh,
                 size: 20, color: isDark ? Colors.white70 : Colors.grey[700]),
             tooltip: AppStrings.get('new_conversation', lang),
             onPressed: _resetConversation,
           ),
+          // ── Server status dot ────────────────────────────────────────
           GestureDetector(
             onTap: _checkServer,
             child: Tooltip(
@@ -299,7 +508,7 @@ class _AISupporterScreenState extends State<AISupporterScreen> {
             AppStrings.get('here_for_you', lang),
             style: TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.bold,
               color: isDark ? Colors.white : Colors.black87,
             ),
           ),
