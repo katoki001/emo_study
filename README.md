@@ -10,7 +10,7 @@ Before you start, make sure you have the following:
 - **Python** (for running Colab notebooks)
 - **Flutter SDK** installed on your machine
 - **Android device or emulator** (Android is the fully supported platform)
-- **A Groq API key** — get one free at [https://console.groq.com](https://console.groq.com)
+- **A Groq API key** — get one free at (https://console.groq.com/keys)
 - **An ngrok account and auth token** — get one free at [https://ngrok.com](https://ngrok.com)
 
 > **Platform note:** The app is fully supported on **Android**. Web (Chrome/Edge) requires Firebase web configuration. Windows desktop builds require Visual Studio with the "Desktop development with C++" workload.
